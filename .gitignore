@@ -25,8 +25,8 @@ common/generated/*
 benchmark/results/*.png
 benchmark/results/*.csv
 
-# Prometheus file SD targets (written at runtime)
-monitoring/targets.json
+# Prometheus file SD targets — initial empty file is tracked; runtime writes are ignored
+# monitoring/targets.json  (keep tracked for docker-compose volume mount)
 
 # OS
 .DS_Store

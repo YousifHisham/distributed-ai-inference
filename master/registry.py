@@ -1,4 +1,7 @@
+from __future__ import annotations
 import asyncio
+import json
+import os
 import time
 from typing import Optional
 from common.models import WorkerRecord, WorkerRegistration, Heartbeat
@@ -6,6 +9,26 @@ from common.enums import WorkerStatus
 from common.logging_config import setup_logging
 
 logger = setup_logging("master.registry")
+
+_TARGETS_FILE = os.getenv("PROMETHEUS_TARGETS_FILE", "/monitoring/targets.json")
+
+
+def _write_prometheus_targets(workers: dict[str, WorkerRecord]):
+    targets = []
+    for w in workers.values():
+        if w.status not in (WorkerStatus.offline,):
+            ip = w.address.replace("http://", "").split(":")[0]
+            worker_http_port = os.getenv("WORKER_HTTP_PORT", "8001")
+            targets.append({
+                "targets": [f"{ip}:{worker_http_port}"],
+                "labels": {"worker_id": w.node_id, "hostname": w.hostname},
+            })
+    try:
+        os.makedirs(os.path.dirname(_TARGETS_FILE), exist_ok=True)
+        with open(_TARGETS_FILE, "w") as f:
+            json.dump(targets, f)
+    except Exception as e:
+        logger.warning(f"Could not write Prometheus targets: {e}")
 
 
 class WorkerRegistry:
@@ -43,6 +66,7 @@ class WorkerRegistry:
             )
             self._workers[reg.node_id] = record
             logger.info(f"Worker registered: {reg.node_id} at {address}")
+            _write_prometheus_targets(self._workers)
             return record
 
     async def update_heartbeat(self, hb: Heartbeat) -> Optional[WorkerRecord]:
@@ -83,6 +107,7 @@ class WorkerRegistry:
             if worker:
                 worker.status = WorkerStatus.draining
                 logger.info(f"Worker draining: {node_id}")
+                _write_prometheus_targets(self._workers)
             return worker
 
     async def mark_unhealthy(self, node_id: str) -> Optional[WorkerRecord]:
@@ -91,6 +116,7 @@ class WorkerRegistry:
             if worker and worker.status not in (WorkerStatus.offline, WorkerStatus.draining):
                 worker.status = WorkerStatus.unhealthy
                 logger.warning(f"Worker marked unhealthy: {node_id}")
+                _write_prometheus_targets(self._workers)
             return worker
 
     async def mark_offline(self, node_id: str):

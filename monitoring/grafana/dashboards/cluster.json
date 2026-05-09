@@ -1,0 +1,108 @@
+{
+  "title": "Distributed AI Inference Cluster",
+  "uid": "dist-ai-cluster",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Healthy Workers",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"red","value":0},{"color":"yellow","value":1},{"color":"green","value":2}] } }
+      },
+      "targets": [{ "datasource": "Prometheus", "expr": "master_healthy_workers", "legendFormat": "Healthy" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Queue Depth",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":0},{"color":"yellow","value":100},{"color":"red","value":500}] } }
+      },
+      "targets": [{ "datasource": "Prometheus", "expr": "master_queue_size", "legendFormat": "Queue" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Active Tasks",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "datasource": "Prometheus", "expr": "master_active_tasks", "legendFormat": "Active" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Requests/sec",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "datasource": "Prometheus", "expr": "rate(master_requests_total[1m])", "legendFormat": "req/s" }]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Unhealthy Workers",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":0},{"color":"red","value":1}] } }
+      },
+      "targets": [{ "datasource": "Prometheus", "expr": "master_unhealthy_workers", "legendFormat": "Unhealthy" }]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Failed Requests",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":0},{"color":"orange","value":1},{"color":"red","value":10}] } }
+      },
+      "targets": [{ "datasource": "Prometheus", "expr": "increase(master_requests_total{status='failed'}[5m])", "legendFormat": "Failed (5m)" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Throughput (requests/sec)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "rate(master_requests_total{status='completed'}[30s])", "legendFormat": "Completed/s" },
+        { "datasource": "Prometheus", "expr": "rate(master_requests_total{status='failed'}[30s])", "legendFormat": "Failed/s" }
+      ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Request Latency (seconds)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.50, rate(master_request_duration_seconds_bucket[1m]))", "legendFormat": "p50" },
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.95, rate(master_request_duration_seconds_bucket[1m]))", "legendFormat": "p95" },
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.99, rate(master_request_duration_seconds_bucket[1m]))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Per-Worker Active Requests",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "worker_active_requests", "legendFormat": "{{worker_id}}" }
+      ]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Per-Worker CPU %",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "worker_cpu_percent", "legendFormat": "{{worker_id}}" }
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Per-Worker RAM %",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "worker_ram_percent", "legendFormat": "{{worker_id}}" }
+      ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Retries & Queue Size",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "rate(master_retries_total[1m])", "legendFormat": "Retries/s" },
+        { "datasource": "Prometheus", "expr": "master_queue_size", "legendFormat": "Queue depth" }
+      ]
+    },
+    {
+      "id": 13, "type": "table", "title": "Worker Status",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "worker_active_requests", "legendFormat": "Active Requests", "instant": true },
+        { "datasource": "Prometheus", "expr": "worker_cpu_percent", "legendFormat": "CPU %", "instant": true },
+        { "datasource": "Prometheus", "expr": "worker_ram_percent", "legendFormat": "RAM %", "instant": true },
+        { "datasource": "Prometheus", "expr": "worker_ollama_healthy", "legendFormat": "Ollama Healthy", "instant": true }
+      ]
+    }
+  ]
+}
