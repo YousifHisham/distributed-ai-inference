@@ -32,12 +32,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create `scripts/compile_proto.sh` that runs `python -m grpc_tools.protoc -I proto --python_out=common/generated --grpc_python_out=common/generated proto/inference.proto` and add `common/generated/__init__.py`; run it to produce `common/generated/inference_pb2.py` and `common/generated/inference_pb2_grpc.py`
-- [ ] T008 [P] Implement `common/enums.py` — TaskStatus enum (queued, assigned, processing, completed, failed, retrying) and WorkerStatus enum (healthy, busy, draining, unhealthy, offline)
-- [ ] T009 [P] Implement `common/models.py` — Pydantic models: WorkerRecord, WorkerRegistration, Heartbeat, InferenceRequest, MetricsSnapshot, WorkerMetric, TaskRecord (fields per data-model.md)
-- [ ] T010 Implement `master/main.py` — FastAPI app with lifespan context manager; loads env vars (MASTER_HTTP_PORT default 8000, MASTER_GRPC_PORT default 50051, SCHEDULING_STRATEGY, MAX_RETRIES, TASK_TIMEOUT, HEARTBEAT_TIMEOUT, MAX_QUEUE_SIZE); registers routers; lifespan starts background services (stubbed for now)
-- [ ] T011 [P] Implement `worker/main.py` — FastAPI app with lifespan context manager; loads env vars (MASTER_GRPC_URL, OLLAMA_URL, WORKER_MODEL, WORKER_MAX_CONCURRENT, HEARTBEAT_INTERVAL, WORKER_HTTP_PORT, WORKER_GRPC_PORT); registers routers; lifespan starts background services (stubbed for now)
-- [ ] T012 [P] Configure structured logging in `common/logging_config.py` using Python's logging module with JSON-formatted output including timestamp, level, service name, and message
+- [x] T007 Create `scripts/compile_proto.sh` that runs `python -m grpc_tools.protoc -I proto --python_out=common/generated --grpc_python_out=common/generated proto/inference.proto` and add `common/generated/__init__.py`; run it to produce `common/generated/inference_pb2.py` and `common/generated/inference_pb2_grpc.py`
+- [x] T008 [P] Implement `common/enums.py` — TaskStatus enum (queued, assigned, processing, completed, failed, retrying) and WorkerStatus enum (healthy, busy, draining, unhealthy, offline)
+- [x] T009 [P] Implement `common/models.py` — Pydantic models: WorkerRecord, WorkerRegistration, Heartbeat, InferenceRequest, MetricsSnapshot, WorkerMetric, TaskRecord (fields per data-model.md)
+- [x] T010 Implement `master/main.py` — FastAPI app with lifespan context manager; loads env vars (MASTER_HTTP_PORT default 8000, MASTER_GRPC_PORT default 50051, SCHEDULING_STRATEGY, MAX_RETRIES, TASK_TIMEOUT, HEARTBEAT_TIMEOUT, MAX_QUEUE_SIZE); registers routers; lifespan starts background services (stubbed for now)
+- [x] T011 [P] Implement `worker/main.py` — FastAPI app with lifespan context manager; loads env vars (MASTER_GRPC_URL, OLLAMA_URL, WORKER_MODEL, WORKER_MAX_CONCURRENT, HEARTBEAT_INTERVAL, WORKER_HTTP_PORT, WORKER_GRPC_PORT); registers routers; lifespan starts background services (stubbed for now)
+- [x] T012 [P] Configure structured logging in `common/logging_config.py` using Python's logging module with JSON-formatted output including timestamp, level, service name, and message
 
 **Checkpoint**: gRPC stubs compiled, models defined, both app skeletons boot — user stories can begin
 
