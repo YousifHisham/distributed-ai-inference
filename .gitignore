@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# gRPC generated stubs (compiled at build time)
+common/generated/*
+!common/generated/__init__.py
+
+# Environment
+.env
+.env.local
+*.env
+
+# Benchmark results
+benchmark/results/*.png
+benchmark/results/*.csv
+
+# Prometheus file SD targets (written at runtime)
+monitoring/targets.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+logs/

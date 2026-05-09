@@ -15,7 +15,7 @@
 
 **Purpose**: Create project skeleton, dependency manifests, configuration, and the proto contract that everything else depends on.
 
-- [ ] T001 Create full directory structure: `master/`, `master/strategies/`, `master/routers/`, `worker/`, `worker/routers/`, `common/`, `common/generated/`, `proto/`, `client/`, `benchmark/benchmark/results/`, `monitoring/grafana/provisioning/datasources/`, `monitoring/grafana/provisioning/dashboards/`, `monitoring/grafana/dashboards/`, `tests/unit/`, `tests/integration/`
+- [x] T001 Create full directory structure: `master/`, `master/strategies/`, `master/routers/`, `worker/`, `worker/routers/`, `common/`, `common/generated/`, `proto/`, `client/`, `benchmark/benchmark/results/`, `monitoring/grafana/provisioning/datasources/`, `monitoring/grafana/provisioning/dashboards/`, `monitoring/grafana/dashboards/`, `tests/unit/`, `tests/integration/`
 - [ ] T002 [P] Create `master/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
 - [ ] T003 [P] Create `worker/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
 - [ ] T004 [P] Create `.env.example` documenting all env vars: MASTER_HTTP_PORT, MASTER_GRPC_PORT, SCHEDULING_STRATEGY, MAX_RETRIES, TASK_TIMEOUT, HEARTBEAT_TIMEOUT, MAX_QUEUE_SIZE, MASTER_GRPC_URL, OLLAMA_URL, WORKER_MODEL, WORKER_MAX_CONCURRENT, HEARTBEAT_INTERVAL, WORKER_HTTP_PORT, WORKER_GRPC_PORT
