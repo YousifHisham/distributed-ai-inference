@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 echo "[proto] Installing grpcio-tools if needed..."
-pip3 install grpcio-tools --quiet
+pip3 install grpcio-tools==1.68.0 --quiet
 
 echo "[proto] Compiling proto/inference.proto..."
 python3 -m grpc_tools.protoc \
