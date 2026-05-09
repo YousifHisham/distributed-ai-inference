@@ -144,9 +144,9 @@
 
 **Independent Test**: `python benchmark/run.py --strategies all --users 50` completes and produces `benchmark/results/comparison.png` and `benchmark/results/results.csv`.
 
-- [ ] T053 [US6] Implement `benchmark/run.py` — CLI tool: `--master URL`, `--users N` (default 100), `--strategies` (space-separated list, default: all 4), `--output DIR` (default benchmark/results/); for each strategy: POST /config/strategy, run load_generator as subprocess or inline async call, collect TaskRecord results; store per-strategy metrics: throughput, avg_latency, p95_latency, total_failed, total_retries
-- [ ] T054 [US6] Add matplotlib chart generation to `benchmark/run.py`: (1) bar chart — throughput per strategy, (2) box plot — latency distribution per strategy, (3) line chart — requests/sec over time per strategy; save all to `--output` dir as PNG files
-- [ ] T055 [P] [US6] Add CSV export to `benchmark/run.py`: write `results.csv` with columns: strategy, request_id, latency, status, retry_count, worker_id; write `summary.csv` with per-strategy aggregates
+- [x] T053 [US6] Implement `benchmark/run.py` — CLI tool: `--master URL`, `--users N` (default 100), `--strategies` (space-separated list, default: all 4), `--output DIR` (default benchmark/results/); for each strategy: POST /config/strategy, run load_generator as subprocess or inline async call, collect TaskRecord results; store per-strategy metrics: throughput, avg_latency, p95_latency, total_failed, total_retries
+- [x] T054 [US6] Add matplotlib chart generation to `benchmark/run.py`: (1) bar chart — throughput per strategy, (2) box plot — latency distribution per strategy, (3) line chart — requests/sec over time per strategy; save all to `--output` dir as PNG files
+- [x] T055 [P] [US6] Add CSV export to `benchmark/run.py`: write `results.csv` with columns: strategy, request_id, latency, status, retry_count, worker_id; write `summary.csv` with per-strategy aggregates
 
 **Checkpoint**: `python benchmark/run.py` → benchmark/results/ contains PNG charts + CSV files comparing all 4 strategies
 
