@@ -109,9 +109,9 @@
 
 **Independent Test**: POST `/config/strategy` with each strategy name, submit 20 tasks, check per-worker task counts differ between strategies.
 
-- [ ] T040 [US4] Implement `master/routers/config.py` — POST /config/strategy: validates strategy name (round_robin, least_active, load_aware, lowest_latency), calls `scheduler.set_strategy(name)`, returns current strategy; GET /health: returns {"status": "ok"}; add both to master/main.py
-- [ ] T041 [US4] Add `set_strategy(name: str)` method to `master/scheduler.py` Scheduler class: instantiates the correct strategy class from a registry dict and replaces the active strategy atomically (assign to instance variable — asyncio single-threaded, no lock needed)
-- [ ] T042 [US4] Write `tests/unit/test_strategies.py` — unit tests for all 4 strategies: create mock WorkerRecord list with varying loads, assert each strategy selects the correct worker; test edge cases (no healthy workers returns None, single worker always selected, tie-breaking behavior)
+- [x] T040 [US4] Implement `master/routers/config.py` — POST /config/strategy: validates strategy name (round_robin, least_active, load_aware, lowest_latency), calls `scheduler.set_strategy(name)`, returns current strategy; GET /health: returns {"status": "ok"}; add both to master/main.py
+- [x] T041 [US4] Add `set_strategy(name: str)` method to `master/scheduler.py` Scheduler class: instantiates the correct strategy class from a registry dict and replaces the active strategy atomically (assign to instance variable — asyncio single-threaded, no lock needed)
+- [x] T042 [US4] Write `tests/unit/test_strategies.py` — unit tests for all 4 strategies: create mock WorkerRecord list with varying loads, assert each strategy selects the correct worker; test edge cases (no healthy workers returns None, single worker always selected, tie-breaking behavior)
 
 **Checkpoint**: POST /config/strategy switches behavior live — unit tests confirm each strategy's selection logic
 
