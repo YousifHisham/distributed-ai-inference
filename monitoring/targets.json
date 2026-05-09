@@ -1,1 +1,1 @@
-[]
+[{"targets": ["172.17.0.3:8001"], "labels": {"worker_id": "bd269c1c67aa-dd7c40a5", "hostname": "bd269c1c67aa"}}, {"targets": ["172.17.0.4:8001"], "labels": {"worker_id": "4270d8cc503a-3179bc5a", "hostname": "4270d8cc503a"}}, {"targets": ["172.17.0.2:8001"], "labels": {"worker_id": "e3d4c274bd39-0d67852f", "hostname": "e3d4c274bd39"}}]
