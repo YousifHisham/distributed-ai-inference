@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package inference;
+
+// ─────────────────────────────────────────────
+// Master gRPC Server  (port 50051)
+// Called by Worker Agents for registration, heartbeat, deregistration
+// ─────────────────────────────────────────────
+
+service MasterService {
+  rpc Register      (WorkerRegistration) returns (RegisterResponse);
+  rpc SendHeartbeat (Heartbeat)          returns (HeartbeatResponse);
+  rpc Deregister    (DeregisterRequest)  returns (DeregisterResponse);
+}
+
+message WorkerRegistration {
+  string node_id        = 1;
+  string hostname       = 2;
+  string ip_address     = 3;
+  int32  port           = 4;
+  string model_name     = 5;
+  int32  max_concurrent = 6;
+  int32  cpu_count      = 7;
+  float  ram_gb         = 8;
+  bool   gpu_available  = 9;
+  string gpu_name       = 10;
+  bool   ollama_healthy = 11;
+}
+
+message RegisterResponse {
+  string status   = 1;
+  string node_id  = 2;
+  string strategy = 3;
+}
+
+message Heartbeat {
+  string node_id         = 1;
+  double timestamp       = 2;
+  string status          = 3;
+  int32  active_requests = 4;
+  int32  queue_size      = 5;
+  float  cpu_pct         = 6;
+  float  ram_pct         = 7;
+  float  gpu_pct         = 8;
+  bool   ollama_healthy  = 9;
+  float  avg_latency     = 10;
+}
+
+message HeartbeatResponse {
+  string status      = 1;
+  double server_time = 2;
+}
+
+message DeregisterRequest {
+  string node_id = 1;
+}
+
+message DeregisterResponse {
+  string status  = 1;
+  string node_id = 2;
+}
+
+// ─────────────────────────────────────────────
+// Worker gRPC Server  (port 50052)
+// Called by Master to dispatch inference tasks and health checks
+// ─────────────────────────────────────────────
+
+service WorkerService {
+  rpc Infer      (InferRequest)   returns (InferResponse);
+  rpc Health     (HealthRequest)  returns (HealthResponse);
+  rpc GetMetrics (MetricsRequest) returns (WorkerMetricsResponse);
+}
+
+message InferRequest {
+  string request_id = 1;
+  string query      = 2;
+  double timeout    = 3;
+}
+
+message InferResponse {
+  string request_id     = 1;
+  string result         = 2;
+  float  inference_time = 3;
+  string worker_id      = 4;
+  string error          = 5;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status          = 1;
+  string node_id         = 2;
+  bool   ollama_healthy  = 3;
+  int32  active_requests = 4;
+  string model_name      = 5;
+}
+
+message MetricsRequest {}
+
+message WorkerMetricsResponse {
+  string node_id         = 1;
+  int32  active_requests = 2;
+  int32  total_completed = 3;
+  int32  total_failed    = 4;
+  float  avg_latency     = 5;
+  float  cpu_pct         = 6;
+  float  ram_pct         = 7;
+  float  gpu_pct         = 8;
+  bool   ollama_healthy  = 9;
+}

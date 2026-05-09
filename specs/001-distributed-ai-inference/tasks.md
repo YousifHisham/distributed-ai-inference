@@ -16,11 +16,11 @@
 **Purpose**: Create project skeleton, dependency manifests, configuration, and the proto contract that everything else depends on.
 
 - [x] T001 Create full directory structure: `master/`, `master/strategies/`, `master/routers/`, `worker/`, `worker/routers/`, `common/`, `common/generated/`, `proto/`, `client/`, `benchmark/benchmark/results/`, `monitoring/grafana/provisioning/datasources/`, `monitoring/grafana/provisioning/dashboards/`, `monitoring/grafana/dashboards/`, `tests/unit/`, `tests/integration/`
-- [ ] T002 [P] Create `master/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
-- [ ] T003 [P] Create `worker/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
-- [ ] T004 [P] Create `.env.example` documenting all env vars: MASTER_HTTP_PORT, MASTER_GRPC_PORT, SCHEDULING_STRATEGY, MAX_RETRIES, TASK_TIMEOUT, HEARTBEAT_TIMEOUT, MAX_QUEUE_SIZE, MASTER_GRPC_URL, OLLAMA_URL, WORKER_MODEL, WORKER_MAX_CONCURRENT, HEARTBEAT_INTERVAL, WORKER_HTTP_PORT, WORKER_GRPC_PORT
-- [ ] T005 [P] Write `proto/inference.proto` — full MasterService (Register, SendHeartbeat, Deregister) and WorkerService (Infer, Health, GetMetrics) with all message types per `contracts/inference.proto` design
-- [ ] T006 [P] Create `tests/conftest.py` with shared pytest fixtures and `pytest.ini` with asyncio_mode = auto
+- [x] T002 [P] Create `master/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
+- [x] T003 [P] Create `worker/requirements.txt` with: fastapi, uvicorn[standard], grpcio, grpcio-tools, httpx, psutil, prometheus-client, pytest, pytest-asyncio
+- [x] T004 [P] Create `.env.example` documenting all env vars: MASTER_HTTP_PORT, MASTER_GRPC_PORT, SCHEDULING_STRATEGY, MAX_RETRIES, TASK_TIMEOUT, HEARTBEAT_TIMEOUT, MAX_QUEUE_SIZE, MASTER_GRPC_URL, OLLAMA_URL, WORKER_MODEL, WORKER_MAX_CONCURRENT, HEARTBEAT_INTERVAL, WORKER_HTTP_PORT, WORKER_GRPC_PORT
+- [x] T005 [P] Write `proto/inference.proto` — full MasterService (Register, SendHeartbeat, Deregister) and WorkerService (Infer, Health, GetMetrics) with all message types per `contracts/inference.proto` design
+- [x] T006 [P] Create `tests/conftest.py` with shared pytest fixtures and `pytest.ini` with asyncio_mode = auto
 
 **Checkpoint**: Directory structure and proto contract exist — proto compilation can begin
 
