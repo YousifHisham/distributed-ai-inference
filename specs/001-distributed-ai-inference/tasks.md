@@ -156,15 +156,15 @@
 
 **Purpose**: Containerization, full integration tests, demo validation.
 
-- [ ] T056 [P] Write `master/Dockerfile` — multi-stage: stage 1 installs grpcio-tools and compiles proto (`python -m grpc_tools.protoc ...`); stage 2 copies compiled stubs + source, installs runtime requirements, sets CMD to `uvicorn master.main:app --host 0.0.0.0 --port $MASTER_HTTP_PORT`; also starts gRPC server via lifespan
-- [ ] T057 [P] Write `worker/Dockerfile` — same multi-stage proto compilation pattern; CMD runs worker/main.py; exposes WORKER_HTTP_PORT and WORKER_GRPC_PORT
-- [ ] T058 Finalize `docker-compose.yml` — Master service (builds master/, ports 8000+50051, env vars, depends_on: none); Prometheus (depends_on: master); Grafana (depends_on: prometheus); add volume for monitoring/targets.json shared between master and prometheus containers; document worker join command in comments
-- [ ] T059 [P] Write `tests/unit/test_registry.py` — unit tests for WorkerRegistry: register, heartbeat update, status transitions (healthy→busy→draining→unhealthy→offline), get_schedulable_workers filters correctly
-- [ ] T060 [P] Write `tests/unit/test_task_queue.py` — unit tests for TaskQueue: enqueue/dequeue ordering, retry_count increment on requeue, max_retries enforcement, queue size limit
-- [ ] T061 [P] Write `tests/integration/test_master_rest.py` — FastAPI TestClient tests: POST /infer, GET /tasks/{id}, GET /workers, POST /config/strategy, GET /health, GET /metrics
-- [ ] T062 Write `README.md` matching quickstart.md steps; include demo scenario script (start → load → kill worker → recover → rejoin)
-- [ ] T063 Run full test suite `pytest tests/` and fix any failures
-- [ ] T064 Execute quickstart.md demo scenario end-to-end on LAN with at least 2 worker laptops; verify Grafana dashboard shows all events
+- [x] T056 [P] Write `master/Dockerfile` — multi-stage: stage 1 installs grpcio-tools and compiles proto (`python -m grpc_tools.protoc ...`); stage 2 copies compiled stubs + source, installs runtime requirements, sets CMD to `uvicorn master.main:app --host 0.0.0.0 --port $MASTER_HTTP_PORT`; also starts gRPC server via lifespan
+- [x] T057 [P] Write `worker/Dockerfile` — same multi-stage proto compilation pattern; CMD runs worker/main.py; exposes WORKER_HTTP_PORT and WORKER_GRPC_PORT
+- [x] T058 Finalize `docker-compose.yml` — Master service (builds master/, ports 8000+50051, env vars, depends_on: none); Prometheus (depends_on: master); Grafana (depends_on: prometheus); add volume for monitoring/targets.json shared between master and prometheus containers; document worker join command in comments
+- [x] T059 [P] Write `tests/unit/test_registry.py` — unit tests for WorkerRegistry: register, heartbeat update, status transitions (healthy→busy→draining→unhealthy→offline), get_schedulable_workers filters correctly
+- [x] T060 [P] Write `tests/unit/test_task_queue.py` — unit tests for TaskQueue: enqueue/dequeue ordering, retry_count increment on requeue, max_retries enforcement, queue size limit
+- [x] T061 [P] Write `tests/integration/test_master_rest.py` — FastAPI TestClient tests: POST /infer, GET /tasks/{id}, GET /workers, POST /config/strategy, GET /health, GET /metrics
+- [x] T062 Write `README.md` matching quickstart.md steps; include demo scenario script (start → load → kill worker → recover → rejoin)
+- [x] T063 Run full test suite `pytest tests/` and fix any failures
+- [x] T064 Execute quickstart.md demo scenario end-to-end on LAN with at least 2 worker laptops; verify Grafana dashboard shows all events
 
 **Checkpoint**: All tests pass — demo scenario executes cleanly — Grafana shows fault tolerance events
 
