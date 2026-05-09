@@ -11,10 +11,10 @@ services:
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "${MASTER_HTTP_PORT}"
+      - "${MASTER_HTTP_PORT:-8000}"
     ports:
-      - "${MASTER_HTTP_PORT}:${MASTER_HTTP_PORT}"
-      - "${MASTER_GRPC_PORT}:${MASTER_GRPC_PORT}"
+      - "${MASTER_HTTP_PORT:-8000}:${MASTER_HTTP_PORT:-8000}"
+      - "${MASTER_GRPC_PORT:-50051}:${MASTER_GRPC_PORT:-50051}"
     environment:
       - MASTER_HTTP_PORT
       - MASTER_GRPC_PORT
@@ -27,30 +27,30 @@ services:
       - ./monitoring:/monitoring
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ['MASTER_HTTP_PORT'] + '/health')\""]
-      interval: "${MASTER_HEALTHCHECK_INTERVAL}"
-      timeout: "${MASTER_HEALTHCHECK_TIMEOUT}"
-      retries: ${MASTER_HEALTHCHECK_RETRIES}
+      interval: "${MASTER_HEALTHCHECK_INTERVAL:-10s}"
+      timeout: "${MASTER_HEALTHCHECK_TIMEOUT:-5s}"
+      retries: ${MASTER_HEALTHCHECK_RETRIES:-3}
 
   prometheus:
-    image: "${PROMETHEUS_IMAGE}"
+    image: "${PROMETHEUS_IMAGE:-prom/prometheus:latest}"
     ports:
-      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/targets.json:/etc/prometheus/targets.json:ro
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-      - "--web.listen-address=0.0.0.0:${PROMETHEUS_PORT}"
+      - "--web.listen-address=0.0.0.0:${PROMETHEUS_PORT:-9090}"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
     depends_on:
       - master
 
   grafana:
-    image: "${GRAFANA_IMAGE}"
+    image: "${GRAFANA_IMAGE:-grafana/grafana:latest}"
     ports:
-      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+      - "${GRAFANA_PORT:-3000}:${GRAFANA_PORT:-3000}"
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED
       - GF_AUTH_ANONYMOUS_ORG_ROLE

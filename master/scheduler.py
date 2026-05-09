@@ -69,10 +69,9 @@ class Scheduler:
 
         if not worker:
             await asyncio.sleep(1)
-            if task.retry_count < self.max_retries:
-                await self.task_queue.requeue(task.request_id)
-            else:
-                self.task_queue.fail(task.request_id, "no_workers_available")
+            # Waiting for an available worker should not count as a failure retry
+            task.retry_count -= 1
+            await self.task_queue.requeue(task.request_id)
             return
 
         task.status = TaskStatus.assigned
