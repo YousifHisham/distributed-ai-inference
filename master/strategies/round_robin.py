@@ -1,3 +1,4 @@
+from __future__ import annotations
 import threading
 from common.models import WorkerRecord
 from master.strategies.base import SchedulingStrategy
