@@ -14,6 +14,7 @@ WORKER_MAX_CONCURRENT = int(os.getenv("WORKER_MAX_CONCURRENT", "4"))
 HEARTBEAT_INTERVAL = float(os.getenv("HEARTBEAT_INTERVAL", "5"))
 WORKER_HTTP_PORT = int(os.getenv("WORKER_HTTP_PORT", "8001"))
 WORKER_GRPC_PORT = int(os.getenv("WORKER_GRPC_PORT", "50052"))
+WORKER_ADVERTISE_HOST = os.getenv("WORKER_ADVERTISE_HOST")
 
 app_state: dict = {}
 
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
         max_concurrent=WORKER_MAX_CONCURRENT,
         heartbeat_interval=HEARTBEAT_INTERVAL,
         grpc_port=WORKER_GRPC_PORT,
+        advertise_host=WORKER_ADVERTISE_HOST,
     )
 
     app_state["agent"] = agent

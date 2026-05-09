@@ -31,6 +31,7 @@ class WorkerAgent:
         max_concurrent: int,
         heartbeat_interval: float,
         grpc_port: int,
+        advertise_host: str | None = None,
     ):
         self.master_grpc_url = master_grpc_url
         self.ollama = ollama_client
@@ -42,7 +43,7 @@ class WorkerAgent:
 
         hostname = socket.gethostname()
         self.node_id = f"{hostname}-{uuid.uuid4().hex[:8]}"
-        self.ip_address = _detect_lan_ip()
+        self.ip_address = advertise_host or _detect_lan_ip()
 
         self._channel: grpc.aio.Channel | None = None
         self._stub: inference_pb2_grpc.MasterServiceStub | None = None
