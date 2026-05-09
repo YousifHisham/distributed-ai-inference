@@ -1,0 +1,60 @@
+What is the capital of France?
+Explain how TCP/IP works in simple terms.
+What is machine learning?
+Write a haiku about distributed systems.
+What is the difference between RAM and ROM?
+Explain the concept of recursion.
+What causes rainbows?
+What is the speed of light?
+Summarize the water cycle in two sentences.
+What is quantum computing?
+Explain what a load balancer does.
+What is the difference between HTTP and HTTPS?
+What is Docker and why is it useful?
+Explain microservices architecture briefly.
+What is a REST API?
+What is the Pythagorean theorem?
+Explain fault tolerance in distributed systems.
+What is the difference between SQL and NoSQL databases?
+What is Kubernetes used for?
+Explain what a neural network is.
+What is latency in computer networks?
+What is a deadlock in operating systems?
+Explain the CAP theorem.
+What is gRPC and how does it differ from REST?
+What is Prometheus used for in monitoring?
+What is Grafana?
+Explain the MapReduce programming model.
+What is the difference between concurrency and parallelism?
+What is a race condition?
+Explain eventual consistency.
+What is a message queue?
+What is Apache Kafka?
+Explain the pub/sub messaging pattern.
+What is a container in software?
+What is the difference between a process and a thread?
+Explain how HTTPS encryption works.
+What is a CDN and how does it work?
+What is rate limiting in APIs?
+Explain horizontal vs vertical scaling.
+What is a reverse proxy?
+What is a hash function?
+Explain what SSL/TLS does.
+What is idempotency in APIs?
+Explain the circuit breaker pattern.
+What is service discovery in microservices?
+What is a Bloom filter?
+Explain consistent hashing.
+What is the difference between a mutex and a semaphore?
+What is a virtual machine?
+Explain the OSI model layers briefly.
+What is sharding in databases?
+Explain leader election in distributed systems.
+What is the two-phase commit protocol?
+Explain the Paxos consensus algorithm briefly.
+What is Raft consensus?
+What is an API gateway?
+Explain blue-green deployment.
+What is canary deployment?
+What is observability in software systems?
+Explain what a trace is in distributed tracing.
