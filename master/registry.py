@@ -44,7 +44,6 @@ class WorkerRegistry:
                 existing.hostname = reg.hostname
                 existing.address = address
                 existing.model_name = reg.model_name
-                existing.max_concurrent = reg.max_concurrent
                 existing.ollama_healthy = reg.ollama_healthy
                 existing.last_heartbeat = time.time()
                 existing.status = WorkerStatus.healthy if reg.ollama_healthy else WorkerStatus.unhealthy
@@ -57,7 +56,6 @@ class WorkerRegistry:
                 address=address,
                 status=WorkerStatus.healthy if reg.ollama_healthy else WorkerStatus.unhealthy,
                 last_heartbeat=time.time(),
-                max_concurrent=reg.max_concurrent,
                 model_name=reg.model_name,
                 ollama_healthy=reg.ollama_healthy,
                 gpu_available=reg.gpu_available,
@@ -84,21 +82,20 @@ class WorkerRegistry:
                 worker.average_latency = hb.avg_latency
 
             # Update load score for load-aware routing
+            gpu_load = 0.0 if hb.gpu_pct < 0 else hb.gpu_pct / 100.0
             worker.current_load = (
-                (hb.active_requests / max(worker.max_concurrent, 1)) * 0.4
+                min(hb.active_requests / 10.0, 1.0) * 0.35
                 + (hb.cpu_pct / 100.0) * 0.2
                 + (hb.ram_pct / 100.0) * 0.2
-                + min(hb.avg_latency / 30.0, 1.0) * 0.2
+                + gpu_load * 0.15
+                + min(hb.avg_latency / 30.0, 1.0) * 0.1
             )
 
             # Status transitions based on load and Ollama health
             if not hb.ollama_healthy:
                 worker.status = WorkerStatus.unhealthy
             elif worker.status not in (WorkerStatus.draining, WorkerStatus.unhealthy, WorkerStatus.offline):
-                if hb.active_requests >= worker.max_concurrent:
-                    worker.status = WorkerStatus.busy
-                else:
-                    worker.status = WorkerStatus.healthy
+                worker.status = WorkerStatus.busy if worker.current_load >= 0.9 else WorkerStatus.healthy
             return worker
 
     async def deregister(self, node_id: str) -> Optional[WorkerRecord]:

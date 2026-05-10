@@ -20,7 +20,6 @@ async def list_workers():
                 "address": w.address,
                 "status": w.status,
                 "model_name": w.model_name,
-                "max_concurrent": w.max_concurrent,
                 "active_requests": w.active_requests,
                 "total_completed": w.total_completed,
                 "total_failed": w.total_failed,

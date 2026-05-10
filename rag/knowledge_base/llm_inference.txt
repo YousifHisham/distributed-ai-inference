@@ -1,0 +1,11 @@
+Large language model inference is computationally expensive because every response requires repeated neural network computation.
+The project delegates model execution to Ollama running locally on each worker laptop.
+The worker container calls Ollama over HTTP, and Ollama decides whether to use CPU, NVIDIA CUDA, or Apple Metal acceleration depending on the host machine.
+
+GPU worker nodes are machines capable of accelerating inference locally.
+The distributed system does not run CUDA directly; it schedules requests to workers and lets the local inference runtime use available hardware.
+This keeps deployment simple across different laptops while preserving distributed task scheduling.
+
+Concurrency is controlled at the worker level using a maximum active request limit.
+This prevents one worker from accepting more LLM generations than its local hardware can handle.
+

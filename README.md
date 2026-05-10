@@ -2,20 +2,24 @@
 
 CSE354 Distributed Computing — Ain Shams University, Semester 2 2025/2026
 
-A production-style distributed system that routes 1000+ concurrent LLM inference requests across multiple worker laptops on a LAN. Demonstrates distributed scheduling, fault tolerance, gRPC cluster communication, and Prometheus/Grafana observability.
+A production-style distributed system that routes 1000+ concurrent LLM inference requests across multiple worker laptops on a LAN. Demonstrates distributed scheduling, fault tolerance, HTTP-based cluster communication, nginx reverse proxying, and Prometheus/Grafana observability.
 
 ## Architecture
 
 ```
 Client Load Generator
         ↓  REST
-   Master Gateway (FastAPI + gRPC server, port 8000/50051)
-        ↓  gRPC
-Worker Agent laptops (gRPC server, port 50052)
+          NGINX reverse proxy
+        ↓  HTTP
+   Master Gateway (FastAPI, port 8000)
+        ↓  HTTP
+Worker Agent laptops (FastAPI server, port 8001)
         ↓  HTTP localhost
     Ollama (native, port 11434)
         ↑
 Prometheus → Grafana (docker-compose, ports 9090/3000)
+
+RAG runs on the master before scheduling: the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
 ```
 
 ## Quick Start
@@ -36,64 +40,116 @@ ollama serve          # if not already running as a service
 ### Step 2 — Start the Master (one laptop)
 
 ```bash
-# Find your LAN IP
-ipconfig getifaddr en0        # macOS
-hostname -I | awk '{print $1}'  # Linux
-
-# Start Master + Prometheus + Grafana
-docker compose up --build
+./scripts/scenario.sh master
 ```
 
 Verify: `curl http://localhost:8000/health` → `{"status": "ok"}`
 
 ### Step 3 — Join worker laptops
 
-Replace `192.168.1.10` with your Master's LAN IP.
+Put the Master's LAN IP in `.env`:
 
-**macOS / Windows:**
-```bash
-docker run -d \
-  -p 8001:8001 -p 50052:50052 \
-  -e MASTER_GRPC_URL=192.168.1.10:50051 \
-  -e OLLAMA_URL=http://host.docker.internal:11434 \
-  -e WORKER_MODEL=llama3.2:1b \
-  -e WORKER_MAX_CONCURRENT=4 \
-  --name worker-agent \
-  distributed-ai-worker
+```env
+MASTER_HTTP_URL=http://192.168.1.10:8000
 ```
 
-**Linux:**
+Then start a worker:
+
 ```bash
-docker run -d --network=host \
-  -e MASTER_GRPC_URL=192.168.1.10:50051 \
-  -e OLLAMA_URL=http://localhost:11434 \
-  -e WORKER_MODEL=llama3.2:1b \
-  -e WORKER_MAX_CONCURRENT=4 \
-  --name worker-agent \
-  distributed-ai-worker
+./scripts/scenario.sh worker
 ```
+
+You can still override the master for a one-off run: `./scripts/run-worker.sh 192.168.1.10`.
 
 Verify: `curl http://192.168.1.10:8000/workers` — new worker appears.
 
-### Step 4 — Open Grafana Dashboard
+### Step 4 — Check the cluster output
+
+```bash
+./scripts/scenario.sh status
+```
+
+Expected shape:
+
+```text
+Master health:
+{"status":"ok"}
+
+Registered workers:
+{"workers":[...]}
+```
+
+### Step 5 — Send a RAG inference request
+
+```bash
+./scripts/scenario.sh rag
+```
+
+Expected shape:
+
+```json
+{
+  "request_id": "...",
+  "result": "...",
+  "worker_id": "...",
+  "retry_count": 0,
+  "rag_sources": ["distributed_systems.txt", "..."]
+}
+```
+
+### Optional — Configure `.env`
+
+Docker Compose reads `.env` automatically. Copy the template once:
+
+```bash
+cp .env.example .env
+```
+
+For this one-master setup, set `MASTER_HTTP_URL` once in `.env`. Worker laptops read that value automatically, and the worker script auto-detects `WORKER_ADVERTISE_HOST`. You usually only edit the worker settings if you want a different model:
+
+```bash
+MASTER_HTTP_URL=http://192.168.1.10:8000
+WORKER_MODEL=llama3.2:1b
+```
+
+### Step 6 — Open Grafana Dashboard
 
 `http://192.168.1.10:3000` → Login: admin / admin → **Cluster Dashboard** auto-loads.
 
-### Step 5 — Run Load Test
+### Step 7 — Run Load Test
 
 ```bash
-pip3 install httpx
-python3 client/load_generator.py --master http://192.168.1.10:8000 --users 100
-python3 client/load_generator.py --master http://192.168.1.10:8000 --users 1000 --burst
+./scripts/scenario.sh load-pdf
+```
+
+This runs the project-PDF load levels: `100`, `500`, and `1000` concurrent users. It prints each completed request with the selected worker, latency, retries, and RAG sources, then prints total success rate, throughput, and latency summaries.
+
+For a smaller rehearsal:
+
+```bash
+python3 scripts/send-project-requests.py --levels 10 25 50 --burst
+```
+
+Or use:
+
+```bash
+./scripts/scenario.sh load-small
 ```
 
 ## Fault Tolerance Demo
 
-1. Start Master + 3 workers + load generator (`--users 500 --ramp 60`)
-2. While running: `docker stop worker-agent` on one worker laptop
-3. Master detects failure within 15s — in-flight tasks retry on healthy workers
-4. Restart: `docker start worker-agent` — worker re-registers, rejoins cluster
-5. Watch all events live in Grafana
+1. Start Master + 3 workers + load generator (`./scripts/scenario.sh fault-load`)
+2. Watch cluster status: `./scripts/scenario.sh fault-watch`
+3. While running, stop one worker laptop: `./scripts/scenario.sh fault-down 10`
+4. Master detects failure in about 6-7s — in-flight tasks retry on healthy workers
+5. Restart: `./scripts/scenario.sh start-worker` — worker re-registers, rejoins cluster
+6. Watch all events live in Grafana
+
+To stop and restart the worker automatically:
+
+```bash
+./scripts/scenario.sh fault-restart 10 15
+```
 
 ## Scheduling Strategies
 
@@ -107,27 +163,12 @@ curl -X POST http://master:8000/config/strategy \
 
 Strategies: `round_robin` · `least_active` · `load_aware` · `lowest_latency`
 
-## Benchmarking
+Script form:
 
 ```bash
-pip3 install matplotlib httpx
-python3 benchmark/run.py \
-  --master http://192.168.1.10:8000 \
-  --users 50 \
-  --strategies round_robin least_active load_aware lowest_latency \
-  --output benchmark/results/
+./scripts/scenario.sh strategy round_robin
+./scripts/scenario.sh strategies
 ```
-
-Produces `benchmark/results/throughput.png`, `latency.png`, `success_rate.png`, `summary.csv`.
-
-## Running Tests
-
-```bash
-pip3 install -r master/requirements.txt
-python3 -m pytest tests/ -v
-```
-
-**49 tests** — unit tests for registry, task queue, and all 4 strategies + integration tests for fault tolerance and REST API.
 
 ## Environment Variables
 
@@ -136,22 +177,26 @@ python3 -m pytest tests/ -v
 | `SCHEDULING_STRATEGY` | `load_aware` | Master |
 | `MAX_RETRIES` | `3` | Master |
 | `TASK_TIMEOUT` | `120` | Master |
-| `HEARTBEAT_TIMEOUT` | `15` | Master |
+| `HEARTBEAT_TIMEOUT` | `6` | Master |
+| `HEALTH_CHECK_INTERVAL` | `1` | Master |
 | `MAX_QUEUE_SIZE` | `5000` | Master |
-| `MASTER_GRPC_URL` | `localhost:50051` | Worker |
+| `RAG_ENABLED` | `true` | Master |
+| `RAG_TOP_K` | `3` | Master |
+| `RAG_DOCS_DIR` | `rag/knowledge_base` | Master |
+| `RAG_DB_DIR` | `.chroma` | Master |
+| `MASTER_HTTP_URL` | `http://localhost:8000` | Worker |
 | `OLLAMA_URL` | `http://host.docker.internal:11434` | Worker |
 | `WORKER_MODEL` | `llama3.2:1b` | Worker |
-| `WORKER_MAX_CONCURRENT` | `4` | Worker |
+| `HEARTBEAT_INTERVAL` | `2` | Worker |
 
 ## Project Structure
 
 ```
-master/          FastAPI REST gateway + gRPC Master server + scheduler
-worker/          gRPC Worker server + Ollama client + heartbeat agent
-common/          Shared Pydantic models, enums, logging, gRPC stubs
-client/          Async load generator (100–1000+ concurrent users)
-benchmark/       Strategy comparison tool with matplotlib charts
+master/          FastAPI REST gateway + HTTP scheduler + worker registration API
+worker/          FastAPI worker HTTP server + Ollama client + heartbeat agent
+common/          Shared Pydantic models, enums, logging utilities
+rag/             ChromaDB-backed knowledge retrieval and seed documents
+client/          Prompt/query set used by scenario scripts
 monitoring/      Prometheus config + Grafana dashboard JSON
-tests/           49 unit + integration tests
-proto/           inference.proto (gRPC service definitions)
+scripts/         One-command demo and scenario runners
 ```

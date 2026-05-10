@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: master
     static_configs:
-      - targets: ["master:8000"]
+      - targets: ["master:8000"]  # must match MASTER_HTTP_PORT in .env
 
   - job_name: workers
     file_sd_configs:

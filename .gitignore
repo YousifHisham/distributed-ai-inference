@@ -8,22 +8,14 @@ env/
 *.egg-info/
 dist/
 build/
-.pytest_cache/
 .coverage
 htmlcov/
-
-# gRPC generated stubs (compiled at build time)
-common/generated/*
-!common/generated/__init__.py
+.chroma/
 
 # Environment
 .env
 .env.local
 *.env
-
-# Benchmark results
-benchmark/results/*.png
-benchmark/results/*.csv
 
 # Prometheus file SD targets — initial empty file is tracked; runtime writes are ignored
 # monitoring/targets.json  (keep tracked for docker-compose volume mount)

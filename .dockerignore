@@ -4,14 +4,11 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+.chroma/
 .env
 .env.*
-specs/
-benchmark/results/
 monitoring/targets.json
-tests/
 *.log
 .DS_Store
 .idea/
 .vscode/
-README.md

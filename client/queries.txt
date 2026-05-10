@@ -21,7 +21,7 @@ Explain what a neural network is.
 What is latency in computer networks?
 What is a deadlock in operating systems?
 Explain the CAP theorem.
-What is gRPC and how does it differ from REST?
+What is retrieval-augmented generation and why is it useful?
 What is Prometheus used for in monitoring?
 What is Grafana?
 Explain the MapReduce programming model.

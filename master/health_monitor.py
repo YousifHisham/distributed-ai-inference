@@ -5,11 +5,19 @@ from common.logging_config import setup_logging
 logger = setup_logging("master.health_monitor")
 
 
-async def run_health_monitor(registry, task_queue, heartbeat_timeout: float):
-    logger.info(f"Health monitor started (timeout={heartbeat_timeout}s)")
+async def run_health_monitor(
+    registry,
+    task_queue,
+    heartbeat_timeout: float,
+    check_interval: float,
+):
+    logger.info(
+        f"Health monitor started (timeout={heartbeat_timeout}s, "
+        f"check_interval={check_interval}s)"
+    )
     while True:
         try:
-            await asyncio.sleep(5)
+            await asyncio.sleep(check_interval)
             now = time.time()
             for worker in registry.get_all():
                 if worker.status in ("draining", "offline"):

@@ -20,13 +20,23 @@ class TaskQueue:
     def register_waiter(self, request_id: str, event: asyncio.Event):
         self._waiters[request_id] = event
 
-    async def enqueue(self, query: str) -> InferenceRequest:
+    async def enqueue(
+        self,
+        query: str,
+        *,
+        original_query: str | None = None,
+        rag_sources: list[str] | None = None,
+        rag_enabled: bool = False,
+    ) -> InferenceRequest:
         if self._queue.full():
             raise RuntimeError("Queue is full — service at capacity")
         task = InferenceRequest(
             query=query,
+            original_query=original_query,
             status=TaskStatus.queued,
             timeout_at=time.time() + self.task_timeout,
+            rag_sources=rag_sources or [],
+            rag_enabled=rag_enabled,
         )
         self.task_registry[task.request_id] = task
         await self._queue.put(task)

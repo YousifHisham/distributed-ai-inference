@@ -1,0 +1,10 @@
+The Distributed AI Inference Orchestration Platform handles many concurrent user requests by routing them through a master node.
+Clients send HTTP requests to nginx, nginx forwards them to the FastAPI master, and the master assigns tasks to worker laptops.
+Each worker exposes an HTTP API, calls local Ollama for inference, and reports health and resource usage back to the master.
+
+Prometheus scrapes master and worker metrics.
+Grafana visualizes healthy workers, queue size, active tasks, throughput, latency, failed requests, retries, CPU usage, RAM usage, GPU usage, and Ollama health.
+
+RAG, or retrieval-augmented generation, improves responses by retrieving relevant context from a knowledge base before calling the LLM.
+In this project, the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
+

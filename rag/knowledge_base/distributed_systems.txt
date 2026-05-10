@@ -1,0 +1,12 @@
+Distributed computing splits work across multiple machines that cooperate over a network.
+In this project, the master node receives client requests and worker nodes execute LLM inference tasks.
+The master maintains a registry of workers, tracks their health, and assigns tasks based on scheduling strategy.
+
+Load balancing distributes incoming work across available compute nodes.
+Common scheduling strategies include round robin, least active requests, load-aware routing, and lowest average latency.
+Load-aware routing can consider active requests, CPU usage, RAM usage, GPU utilization, latency, and worker health.
+
+Fault tolerance keeps the system available when a worker fails.
+Workers send periodic heartbeats to the master.
+If a heartbeat is missed for longer than the configured timeout, the master marks the worker unhealthy and requeues in-flight tasks.
+

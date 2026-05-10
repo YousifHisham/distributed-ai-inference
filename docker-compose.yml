@@ -12,17 +12,18 @@ services:
       - "0.0.0.0"
       - "--port"
       - "${MASTER_HTTP_PORT}"
-    ports:
-      - "${MASTER_HTTP_PORT}:${MASTER_HTTP_PORT}"
-      - "${MASTER_GRPC_PORT}:${MASTER_GRPC_PORT}"
     environment:
       - MASTER_HTTP_PORT
-      - MASTER_GRPC_PORT
       - SCHEDULING_STRATEGY
       - MAX_RETRIES
       - TASK_TIMEOUT
       - HEARTBEAT_TIMEOUT
+      - HEALTH_CHECK_INTERVAL
       - MAX_QUEUE_SIZE
+      - RAG_ENABLED
+      - RAG_TOP_K
+      - RAG_DOCS_DIR
+      - RAG_DB_DIR
     volumes:
       - ./monitoring:/monitoring
     healthcheck:
@@ -30,6 +31,17 @@ services:
       interval: "${MASTER_HEALTHCHECK_INTERVAL}"
       timeout: "${MASTER_HEALTHCHECK_TIMEOUT}"
       retries: ${MASTER_HEALTHCHECK_RETRIES}
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${MASTER_HTTP_PORT}:80"
+    environment:
+      - MASTER_HTTP_PORT
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - master
 
   prometheus:
     image: "${PROMETHEUS_IMAGE}"
