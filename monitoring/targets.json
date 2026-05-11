@@ -1,1 +1,1 @@
-[]
+[{"targets": ["192.168.100.50:8001"], "labels": {"worker_id": "0c980ab141ce-cf22357b", "hostname": "0c980ab141ce"}}]

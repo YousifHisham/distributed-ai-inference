@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from worker.main import app_state
+from worker.state import app_state
 from common.logging_config import setup_logging
 
 logger = setup_logging("worker.cluster")
