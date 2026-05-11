@@ -1,10 +1,39 @@
 The Distributed AI Inference Orchestration Platform handles many concurrent user requests by routing them through a master node.
-Clients send HTTP requests to nginx, nginx forwards them to the FastAPI master, and the master assigns tasks to worker laptops.
-Each worker exposes an HTTP API, calls local Ollama for inference, and reports health and resource usage back to the master.
+Clients send HTTP requests to nginx, nginx forwards them to the FastAPI master, and the master assigns tasks to GPU worker nodes.
+Each worker exposes an HTTP API, performs RAG-augmented inference via Ollama, and reports GPU health metrics back to the master.
 
-Prometheus scrapes master and worker metrics.
-Grafana visualizes healthy workers, queue size, active tasks, throughput, latency, failed requests, retries, CPU usage, RAM usage, GPU usage, and Ollama health.
+The master node is a FastAPI application that manages worker registration, heartbeat tracking, and request dispatching.
+Workers register on startup with their URL and total VRAM, receiving a unique worker_id from the master.
+Workers send heartbeats every 2 seconds containing GPU utilization, VRAM usage, temperature, ECC errors, and active request count.
 
-RAG, or retrieval-augmented generation, improves responses by retrieving relevant context from a knowledge base before calling the LLM.
-In this project, the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
+Five scheduling strategies are supported and can be switched live without restarting:
+1. Round Robin: cycles through workers in order, simple and fair for homogeneous clusters.
+2. Least Active: routes to the worker with fewest in-flight requests, minimizing queuing.
+3. Load Aware: combines active requests (70% weight) and average latency (30% weight) for balanced routing.
+4. Lowest Latency: routes to the worker with the lowest exponential moving average latency (alpha=0.2).
+5. GPU Aware: routes to the worker with the most free GPU resources (50% GPU compute + 50% VRAM availability).
 
+The strategy can be changed at runtime by sending POST /config/strategy with the desired strategy name.
+Strategy changes take effect immediately for all new requests without interrupting in-flight ones.
+
+Fault detection works as follows: if a worker's heartbeat is not received within 6 seconds, it is marked UNHEALTHY.
+UNHEALTHY workers are excluded from routing; in-flight requests are retried on other available workers up to 3 times.
+A restarted worker can re-register at any time and will immediately receive new traffic.
+
+Proactive hardware health management uses GPU metrics to trigger DRAINING state:
+Trigger: GPU temperature > 85°C OR ECC error count > 0.
+Recovery: GPU temperature <= 80°C AND ECC errors == 0 AND active requests == 0.
+DRAINING workers finish their current requests but receive no new ones.
+
+Prometheus scrapes the master's /metrics endpoint every 5 seconds.
+Exported metrics include: inference_requests_total (counter), inference_latency_seconds (histogram),
+worker_gpu_util_pct, worker_vram_used_gb, worker_gpu_temp_c, worker_active_requests, worker_status (all gauges).
+Grafana visualizes these metrics in a pre-configured dashboard showing live cluster health.
+
+The system is containerized: docker-compose.yml starts master + nginx + prometheus + grafana.
+docker-compose.worker.yml starts a worker agent that connects to the master via MASTER_HTTP_URL.
+MOCK_GPU=true disables pynvml and returns zero GPU metrics, enabling local development without a GPU.
+
+RAG is implemented on the worker side: each worker loads the knowledge base on startup, chunks and embeds documents,
+stores them in ChromaDB, and retrieves context for each inference request before calling Ollama.
+The knowledge base covers distributed systems concepts, LLM inference, and project architecture.

@@ -1,11 +1,39 @@
-Large language model inference is computationally expensive because every response requires repeated neural network computation.
-The project delegates model execution to Ollama running locally on each worker laptop.
+Large language model inference is computationally expensive because every token generation requires a full neural network forward pass.
+Modern LLMs use transformer architecture with attention mechanisms that scale quadratically with sequence length.
+GPU acceleration is essential for practical LLM inference speeds — CUDA cores perform matrix multiplications in parallel.
+
+vLLM is a high-performance LLM inference engine that uses PagedAttention to efficiently manage GPU memory.
+vLLM provides an OpenAI-compatible REST API at /v1/chat/completions, making it a drop-in replacement for OpenAI's API.
+Ollama is a simpler alternative that supports multiple model formats and provides the same OpenAI-compatible endpoint at /v1/chat/completions.
 The worker container calls Ollama over HTTP, and Ollama decides whether to use CPU, NVIDIA CUDA, or Apple Metal acceleration depending on the host machine.
 
-GPU worker nodes are machines capable of accelerating inference locally.
-The distributed system does not run CUDA directly; it schedules requests to workers and lets the local inference runtime use available hardware.
-This keeps deployment simple across different laptops while preserving distributed task scheduling.
+The OpenAI chat completions API uses a message format with roles: system, user, and assistant.
+A typical request includes a model name, a list of messages, and optional parameters like temperature and max_tokens.
+The response includes a choices array with the generated message content.
 
-Concurrency is controlled at the worker level using a maximum active request limit.
-This prevents one worker from accepting more LLM generations than its local hardware can handle.
+VRAM (Video RAM) is GPU memory used to store model weights and the KV-cache during inference.
+A 7B parameter model in 16-bit precision requires approximately 14GB of VRAM.
+A 1B parameter model in 16-bit precision requires approximately 2GB of VRAM.
+The GPU worker reports VRAM usage (used and total) in every heartbeat so the master can make GPU-aware routing decisions.
 
+GPU utilization percentage measures how busy the GPU compute units are (0-100%).
+High GPU utilization with low memory pressure indicates efficient use of hardware.
+ECC (Error Correcting Code) memory detects and corrects memory errors, critical for numerical stability in LLM inference.
+If ECC errors are detected, the worker transitions to DRAINING state to prevent corrupted inference results.
+
+Batch inference processes multiple requests simultaneously to increase GPU utilization.
+Concurrency is controlled at the worker level to prevent overloading local hardware.
+
+Temperature in LLM inference is a hyperparameter that controls response randomness.
+Low temperature (near 0) makes responses deterministic; high temperature increases creativity and diversity.
+
+Retrieval-Augmented Generation (RAG) improves LLM responses by injecting relevant context from a knowledge base into the prompt.
+RAG reduces hallucination by grounding responses in actual documents rather than relying purely on model weights.
+The standard RAG pipeline: embed query, search vector DB, retrieve top-k documents, inject into prompt, call LLM.
+The enriched prompt format used in this system: "Context:\n{chunks}\n\nQuestion: {query}\n\nAnswer:"
+
+ChromaDB is an open-source vector database designed for embedding storage and similarity search.
+Embeddings are dense vector representations of text produced by models like sentence-transformers.
+The all-MiniLM-L6-v2 model produces 384-dimensional embeddings and is fast enough for real-time retrieval.
+Chunking splits long documents into smaller pieces before embedding to respect context window limits.
+A chunk size of 500 characters with 50-character overlap preserves context at chunk boundaries.

@@ -3,10 +3,32 @@ In this project, the master node receives client requests and worker nodes execu
 The master maintains a registry of workers, tracks their health, and assigns tasks based on scheduling strategy.
 
 Load balancing distributes incoming work across available compute nodes.
-Common scheduling strategies include round robin, least active requests, load-aware routing, and lowest average latency.
-Load-aware routing can consider active requests, CPU usage, RAM usage, GPU utilization, latency, and worker health.
+Common scheduling strategies include round robin, least active requests, load-aware routing, lowest average latency, and GPU-aware routing.
+Load-aware routing considers active requests, GPU utilization, VRAM usage, latency, and worker health to select the best worker.
 
 Fault tolerance keeps the system available when a worker fails.
-Workers send periodic heartbeats to the master.
-If a heartbeat is missed for longer than the configured timeout, the master marks the worker unhealthy and requeues in-flight tasks.
+Workers send periodic heartbeats to the master every 2 seconds.
+If a heartbeat is missed for longer than 6 seconds, the master marks the worker UNHEALTHY and excludes it from routing.
+In-flight requests on a failed worker are retried on other healthy workers up to 3 times.
 
+The CAP theorem states that distributed systems cannot simultaneously guarantee Consistency, Availability, and Partition tolerance.
+This system prioritizes Availability and Partition tolerance — the master continues serving requests as long as at least one worker is healthy.
+
+Leader election is used when a distributed system needs one coordinator. In this project the master node acts as the single coordinator.
+
+Consistent hashing is useful for distributing data across nodes. For stateless inference tasks, simpler strategies like round-robin and least-active work well.
+
+The two-phase commit protocol ensures distributed transactions are atomic. This inference system is stateless and does not require distributed transactions.
+
+Heartbeats are lightweight periodic messages that signal liveness. Missing heartbeats trigger health state transitions in the worker registry.
+
+Worker draining is a graceful degradation state where a worker stops accepting new requests but completes in-flight ones.
+Draining is triggered when GPU temperature exceeds 85°C or ECC memory errors are detected.
+A draining worker recovers to HEALTHY when temperature drops below 80°C, ECC errors clear, and active requests reach zero.
+
+Exponential Moving Average (EMA) smooths time-series data by weighting recent observations more heavily.
+Formula: new_ema = alpha * new_sample + (1 - alpha) * old_ema, where alpha = 0.2 in this system.
+EMA is used to track average inference latency per worker.
+
+Horizontal scaling adds more worker nodes to handle increased load. This system supports dynamic worker registration and removal.
+Vertical scaling increases resources on individual nodes (more GPU VRAM, higher clock speed).
