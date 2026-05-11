@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 Live cluster dashboard. Polls /workers every 0.5s and prints a refreshing view.
 
@@ -49,7 +50,6 @@ def since(dt_str: str | None) -> str:
     if not dt_str:
         return "never"
     try:
-        from datetime import datetime, timezone
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
         secs = (datetime.now(timezone.utc) - dt).total_seconds()
         return f"{secs:.1f}s ago"

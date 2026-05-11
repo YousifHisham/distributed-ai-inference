@@ -156,13 +156,19 @@ class Scheduler:
             except Exception as exc:
                 last_exc = exc
                 retry_count += 1
-                self._registry.mark_unhealthy(worker.worker_id)
-                logger.warning(
-                    "Worker %s failed on attempt %d: %s — marking UNHEALTHY",
-                    worker.worker_id,
-                    attempt + 1,
-                    exc,
-                )
+                # Only mark unhealthy on connection errors (worker is unreachable).
+                # Timeouts mean the worker is slow/busy, not dead — don't kill it.
+                if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
+                    self._registry.mark_unhealthy(worker.worker_id)
+                    logger.warning(
+                        "Worker %s unreachable on attempt %d: %s — marking UNHEALTHY",
+                        worker.worker_id, attempt + 1, exc,
+                    )
+                else:
+                    logger.warning(
+                        "Worker %s failed on attempt %d: %s — retrying",
+                        worker.worker_id, attempt + 1, exc,
+                    )
             finally:
                 worker.active_requests = max(0, worker.active_requests - 1)
 
@@ -184,7 +190,7 @@ class Scheduler:
         resp = await self._http.post(
             f"{worker.url}/infer",
             json=payload.model_dump(),
-            timeout=35.0,
+            timeout=120.0,
         )
         resp.raise_for_status()
         return WorkerInferResponse.model_validate(resp.json())

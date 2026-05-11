@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 End-to-end cluster test. Shows per-worker breakdown, latencies, and strategy behavior.
 
@@ -64,7 +65,7 @@ async def show_cluster_status(client: httpx.AsyncClient, master_url: str) -> boo
 async def send_one(client: httpx.AsyncClient, master_url: str, query: str, idx: int) -> dict:
     start = time.monotonic()
     try:
-        r = await client.post(f"{master_url}/infer", json={"query": query}, timeout=60)
+        r = await client.post(f"{master_url}/infer", json={"query": query}, timeout=150)
         elapsed = (time.monotonic() - start) * 1000
         if r.status_code == 200:
             d = r.json()
@@ -81,7 +82,7 @@ async def send_one(client: httpx.AsyncClient, master_url: str, query: str, idx: 
 
 
 async def run_test(master_url: str, concurrency: int, total: int, strategy: str | None) -> None:
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=150) as client:
         reachable = await show_cluster_status(client, master_url)
         if not reachable:
             sys.exit(1)

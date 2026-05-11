@@ -17,7 +17,7 @@ async def register_worker(body: RegisterRequest, request: Request) -> RegisterRe
 
     registry = request.app.state.registry
     node = registry.register(body.worker_url, body.gpu_total_vram_gb)
-    return RegisterResponse(worker_id=node.worker_id, heartbeat_interval_s=0.25)
+    return RegisterResponse(worker_id=node.worker_id)
 
 
 @router.post("/workers/heartbeat")
@@ -29,16 +29,15 @@ async def worker_heartbeat(body: HeartbeatPayload, request: Request) -> dict:
 
     registry.update_heartbeat(body.worker_id, body)
 
-    # Draining / recovery logic (US4)
+    # Draining / recovery logic
     if body.gpu_temp_c > 85 or body.ecc_errors > 0:
         registry.set_draining(body.worker_id)
-    elif (
-        node.status == WorkerStatus.DRAINING
-        and body.gpu_temp_c <= 80
-        and body.ecc_errors == 0
-        and body.active_requests == 0
-    ):
+    elif node.status == WorkerStatus.DRAINING and body.gpu_temp_c <= 80 and body.ecc_errors == 0:
         registry.set_healthy(body.worker_id)
+    elif node.status == WorkerStatus.UNHEALTHY and body.gpu_temp_c <= 80 and body.ecc_errors == 0:
+        # Worker is still sending heartbeats — it's alive, recover it
+        registry.set_healthy(body.worker_id)
+        logger.info("Worker %s recovered from UNHEALTHY (heartbeat still arriving)", body.worker_id)
 
     # Update Prometheus per-worker gauges (US5)
     metrics = getattr(request.app.state, "worker_metrics", None)
