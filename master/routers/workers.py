@@ -40,3 +40,23 @@ async def deregister_worker(body: DeregisterRequest):
         raise HTTPException(status_code=503, detail="Service not ready")
     await registry.deregister(body.node_id)
     return {"status": "draining", "node_id": body.node_id}
+
+
+@router.delete("/workers/{node_id}")
+async def delete_worker(node_id: str):
+    registry = app_state.get("registry")
+    if not registry:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    removed = await registry.remove(node_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    return {"status": "deleted", "node_id": node_id}
+
+
+@router.delete("/workers")
+async def purge_inactive_workers():
+    registry = app_state.get("registry")
+    if not registry:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    removed = await registry.purge_inactive()
+    return {"status": "purged", "removed": removed}

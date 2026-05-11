@@ -116,6 +116,28 @@ class WorkerRegistry:
                 _write_prometheus_targets(self._workers)
             return worker
 
+    async def remove(self, node_id: str) -> bool:
+        async with self._lock:
+            if node_id in self._workers:
+                del self._workers[node_id]
+                logger.info(f"Worker removed: {node_id}")
+                _write_prometheus_targets(self._workers)
+                return True
+            return False
+
+    async def purge_inactive(self) -> list[str]:
+        async with self._lock:
+            inactive = [
+                nid for nid, w in self._workers.items()
+                if w.status in (WorkerStatus.offline, WorkerStatus.draining, WorkerStatus.unhealthy)
+            ]
+            for nid in inactive:
+                del self._workers[nid]
+                logger.info(f"Worker purged: {nid}")
+            if inactive:
+                _write_prometheus_targets(self._workers)
+            return inactive
+
     async def mark_offline(self, node_id: str):
         async with self._lock:
             worker = self._workers.get(node_id)

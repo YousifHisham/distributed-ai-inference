@@ -65,4 +65,4 @@ echo "Worker IP:   $WORKER_ADVERTISE_HOST"
 echo
 
 cd "$ROOT_DIR"
-exec docker compose -f docker-compose.worker.yml up --build
+exec docker compose -f docker-compose.worker.yml up --build -d
