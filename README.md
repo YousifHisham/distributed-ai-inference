@@ -22,38 +22,44 @@ Prometheus → Grafana (docker-compose, ports 9090/3000)
 RAG runs on the master before scheduling: the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
 ```
 
+# How to Run Our Project
+
 ## Quick Start
 
 ### Prerequisites
 
-Every laptop needs:
+Every participating laptop in the cluster requires:
 - **Docker** (Docker Desktop on Mac/Windows, Docker Engine on Linux)
 - **Ollama** installed natively: https://ollama.com/download
 
-### Step 1 — Pull the model on each worker laptop
+### Step 1 — Pull the Model on Each Worker Laptop
 
 ```bash
 ollama pull llama3.2:1b
-ollama serve          # if not already running as a service
+ollama serve          # Run this if Ollama is not already running as a background service
 ```
 
-### Step 2 — Start the Master (one laptop)
+### Step 2 — Start the Master Node (one laptop)
 
 ```bash
 ./scripts/scenario.sh master
 ```
 
-Verify: `curl http://localhost:8000/health` → `{"status": "ok"}`
+Verify: `curl http://localhost:8000/health` and expect `{"status": "ok"}`
 
-### Step 3 — Join worker laptops
+### Step 3 — Configure and Join Worker Laptops
 
-Put the Master's LAN IP in `.env`:
+Workers need to know where the Master is located on the LAN. On each worker laptop, configure the `.env` file with the Master's IP address:
+```env
+cp .env.example .env
+```
 
 ```env
 MASTER_HTTP_URL=http://192.168.1.10:8000
+WORKER_MODEL=llama3.2:1b
 ```
 
-Then start a worker:
+Then start a worker node:
 
 ```bash
 ./scripts/scenario.sh worker
@@ -61,9 +67,11 @@ Then start a worker:
 
 You can still override the master for a one-off run: `./scripts/run-worker.sh 192.168.1.10`.
 
-Verify: `curl http://192.168.1.10:8000/workers` — new worker appears.
+Verify: Check the Master node by running `curl http://192.168.1.10:8000/workers` to ensure the new worker appears in the registry.
 
-### Step 4 — Check the cluster output
+### Step 4 — Check the Cluster Output
+
+Check the overarching health of the Master and registered workers:
 
 ```bash
 ./scripts/scenario.sh status
@@ -79,7 +87,9 @@ Registered workers:
 {"workers":[...]}
 ```
 
-### Step 5 — Send a RAG inference request
+### Step 5 — Send a RAG Inference Request
+
+Test the Retrieval-Augmented Generation pipeline:
 
 ```bash
 ./scripts/scenario.sh rag
@@ -112,11 +122,13 @@ MASTER_HTTP_URL=http://192.168.1.10:8000
 WORKER_MODEL=llama3.2:1b
 ```
 
-### Step 6 — Open Grafana Dashboard
+### Step 6 — Monitor via Grafana Dashboard
 
-`http://192.168.1.10:3000` → Login: admin / admin → **Cluster Dashboard** auto-loads.
+Navigate to `http://192.168.1.10:3000` on any browser in the network → Login: admin / admin → **Cluster Dashboard** will automatically load, displaying real-time metrics.
 
-### Step 7 — Run Load Test
+### Step 7 — Execute Load Tests
+
+To evaluate system performance under concurrency, run the automated load testing script for 100, 500, and 1000 users:
 
 ```bash
 ./scripts/scenario.sh load-pdf
@@ -124,28 +136,31 @@ WORKER_MODEL=llama3.2:1b
 
 This runs the project-PDF load levels: `100`, `500`, and `1000` concurrent users. It prints each completed request with the selected worker, latency, retries, and RAG sources, then prints total success rate, throughput, and latency summaries.
 
-For a smaller rehearsal:
+For a smaller rehearsal (10, 25, 50 users):
+
+
+```bash
+./scripts/scenario.sh load-small
+```
+Or use the Python script directly:
 
 ```bash
 python3 scripts/send-project-requests.py --levels 10 25 50 --burst
 ```
 
-Or use:
-
-```bash
-./scripts/scenario.sh load-small
-```
 
 ## Fault Tolerance Demo
+
+To demonstrate the system's ability to recover from node failures:
 
 1. Start Master + 3 workers + load generator (`./scripts/scenario.sh fault-load`)
 2. Watch cluster status: `./scripts/scenario.sh fault-watch`
 3. While running, stop one worker laptop: `./scripts/scenario.sh fault-down 10`
-4. Master detects failure in about 6-7s — in-flight tasks retry on healthy workers
-5. Restart: `./scripts/scenario.sh start-worker` — worker re-registers, rejoins cluster
-6. Watch all events live in Grafana
+4. The Master will detect the failure in ~6 seconds and automatically requeue in-flight tasks to healthy workers
+5. Restart the downed node: `./scripts/scenario.sh start-worker`. It will re-register and rejoin the cluster seamlessly.
+6. Watch all events live in Grafana.
 
-To stop and restart the worker automatically:
+Automated restart script:
 
 ```bash
 ./scripts/scenario.sh fault-restart 10 15
@@ -153,7 +168,7 @@ To stop and restart the worker automatically:
 
 ## Scheduling Strategies
 
-Switch strategy live (no restart needed):
+You can hot-swap the load balancing strategy dynamically without restarting the cluster:
 
 ```bash
 curl -X POST http://master:8000/config/strategy \
@@ -161,9 +176,9 @@ curl -X POST http://master:8000/config/strategy \
   -d '{"strategy": "round_robin"}'
 ```
 
-Strategies: `round_robin` · `least_active` · `load_aware` · `lowest_latency`
+Available Strategies: `round_robin` · `least_active` · `load_aware` · `lowest_latency`
 
-Script form:
+Using provided scripts:
 
 ```bash
 ./scripts/scenario.sh strategy round_robin
