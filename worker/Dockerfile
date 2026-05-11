@@ -11,7 +11,7 @@ COPY worker/ worker/
 
 ENV MASTER_HTTP_URL=http://host.docker.internal:8000
 ENV OLLAMA_URL=http://host.docker.internal:11434
-ENV WORKER_MODEL=llama3.2:1b
+ENV WORKER_MODEL=llama3.1:8b
 ENV HEARTBEAT_INTERVAL=2
 ENV WORKER_HTTP_PORT=8001
 
