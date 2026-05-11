@@ -58,9 +58,11 @@ async def lifespan(app: FastAPI):
         logger.warning("Unknown SCHEDULING_STRATEGY=%s — using load_aware", initial_strategy)
 
     await health_monitor.start()
+    await scheduler.start()
 
     yield
 
+    await scheduler.stop()
     await health_monitor.stop()
     await http_client.aclose()
 

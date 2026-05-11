@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import uuid
+from dataclasses import dataclass
 
 import httpx
 
@@ -26,6 +27,15 @@ _STRATEGY_MAP: dict[StrategyType, type[BaseStrategy]] = {
 }
 
 _MAX_RETRIES = 3
+_DISPATCHER_POLL_INTERVAL = 0.05  # 50ms — how often dispatcher checks for free slots
+
+
+@dataclass
+class _PendingJob:
+    query: str
+    request_id: str
+    future: asyncio.Future
+    enqueued_at: float
 
 
 class Scheduler:
@@ -34,10 +44,22 @@ class Scheduler:
         self._http = http_client
         self._strategy: BaseStrategy = RoundRobinStrategy()
         self._lock = asyncio.Lock()
+        self._queue: asyncio.Queue[_PendingJob] = asyncio.Queue()
+        self._dispatcher_task: asyncio.Task | None = None
 
-        # Prometheus metrics (set by main.py after creation)
         self.requests_total = None
         self.latency_histogram = None
+
+    async def start(self) -> None:
+        self._dispatcher_task = asyncio.create_task(self._dispatcher_loop())
+
+    async def stop(self) -> None:
+        if self._dispatcher_task:
+            self._dispatcher_task.cancel()
+            try:
+                await self._dispatcher_task
+            except asyncio.CancelledError:
+                pass
 
     async def swap_strategy(self, strategy_type: StrategyType) -> None:
         async with self._lock:
@@ -48,20 +70,64 @@ class Scheduler:
     def current_strategy_name(self) -> str:
         return self._strategy.name
 
+    @property
+    def queue_depth(self) -> int:
+        return self._queue.qsize()
+
     async def dispatch(self, query: str, request_id: str) -> InferenceResponse:
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future = loop.create_future()
+        job = _PendingJob(
+            query=query,
+            request_id=request_id,
+            future=future,
+            enqueued_at=time.monotonic(),
+        )
+        await self._queue.put(job)
+        return await future
+
+    async def _dispatcher_loop(self) -> None:
+        while True:
+            job = await self._queue.get()
+
+            # wait until a worker has a free slot
+            worker = None
+            while worker is None:
+                async with self._lock:
+                    workers = self._registry.get_schedulable_workers()
+                    workers_with_capacity = [w for w in workers if w.free_slots > 0]
+                    if workers_with_capacity:
+                        try:
+                            worker = self._strategy.select_worker(workers_with_capacity)
+                            worker.active_requests += 1
+                        except ValueError:
+                            worker = None
+                if worker is None:
+                    await asyncio.sleep(_DISPATCHER_POLL_INTERVAL)
+
+            asyncio.create_task(self._execute_job(job, worker))
+
+    async def _execute_job(self, job: _PendingJob, worker: WorkerNode) -> None:
         start = time.monotonic()
         retry_count = 0
         last_exc: Exception | None = None
 
         for attempt in range(_MAX_RETRIES + 1):
-            workers = self._registry.get_schedulable_workers()
-            if not workers:
-                raise NoHealthyWorkersError("No healthy workers available")
+            if attempt > 0:
+                # retry: pick a new worker
+                async with self._lock:
+                    workers = self._registry.get_schedulable_workers()
+                    workers_with_capacity = [w for w in workers if w.free_slots > 0]
+                    if not workers_with_capacity:
+                        break
+                    try:
+                        worker = self._strategy.select_worker(workers_with_capacity)
+                        worker.active_requests += 1
+                    except ValueError:
+                        break
 
-            worker = self._strategy.select_worker(workers)
-            worker.active_requests += 1
             try:
-                result = await self._call_worker(worker, query, request_id)
+                result = await self._call_worker(worker, job.query, job.request_id)
                 elapsed_ms = (time.monotonic() - start) * 1000
                 self._registry.update_avg_latency(worker.worker_id, elapsed_ms)
 
@@ -77,8 +143,8 @@ class Scheduler:
                         worker_id=worker.worker_id,
                     ).observe(elapsed_ms / 1000)
 
-                return InferenceResponse(
-                    request_id=request_id,
+                response = InferenceResponse(
+                    request_id=job.request_id,
                     result=result.result,
                     worker_id=worker.worker_id,
                     latency_ms=elapsed_ms,
@@ -86,6 +152,10 @@ class Scheduler:
                     retry_count=retry_count,
                     strategy=self._strategy.name,
                 )
+                if not job.future.done():
+                    job.future.set_result(response)
+                return
+
             except Exception as exc:
                 last_exc = exc
                 retry_count += 1
@@ -106,7 +176,10 @@ class Scheduler:
                 status="error",
             ).inc()
 
-        raise AllRetriesExhaustedError(f"All {_MAX_RETRIES} retries failed: {last_exc}") from last_exc
+        if not job.future.done():
+            job.future.set_exception(
+                AllRetriesExhaustedError(f"All {_MAX_RETRIES} retries failed: {last_exc}")
+            )
 
     async def _call_worker(self, worker: WorkerNode, query: str, request_id: str):
         from common.models import WorkerInferResponse

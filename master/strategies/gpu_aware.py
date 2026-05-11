@@ -8,12 +8,13 @@ class GpuAwareStrategy(BaseStrategy):
         return "gpu_aware"
 
     def select_worker(self, workers: list[WorkerNode]) -> WorkerNode:
-        if not workers:
-            raise ValueError("No workers available")
+        available = [w for w in workers if w.free_slots > 0]
+        if not available:
+            raise ValueError("No workers with free slots")
 
         def score(w: WorkerNode) -> float:
             gpu_free = 1.0 - (w.gpu_util_pct / 100.0)
             vram_free = (w.vram_total_gb - w.vram_used_gb) / w.vram_total_gb if w.vram_total_gb > 0 else 0.5
             return 0.5 * gpu_free + 0.5 * vram_free
 
-        return max(workers, key=score)
+        return max(available, key=score)

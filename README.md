@@ -2,201 +2,284 @@
 
 CSE354 Distributed Computing — Ain Shams University, Semester 2 2025/2026
 
-A production-style distributed system that routes 1000+ concurrent LLM inference requests across multiple worker laptops on a LAN. Demonstrates distributed scheduling, fault tolerance, HTTP-based cluster communication, nginx reverse proxying, and Prometheus/Grafana observability.
+A distributed system that routes LLM inference requests across multiple GPU worker nodes. The master node runs locally on your Mac via Docker and dispatches requests to GPU workers on Thunder Compute instances. Includes 5 live-switchable scheduling strategies, RAG-augmented inference, fault tolerance, and Prometheus/Grafana monitoring.
 
 ## Architecture
 
 ```
-Client Load Generator
-        ↓  REST
-          NGINX reverse proxy
-        ↓  HTTP
-   Master Gateway (FastAPI, port 8000)
-        ↓  HTTP
-Worker Agent laptops (FastAPI server, port 8001)
-        ↓  HTTP localhost
-    Ollama (native, port 11434)
-        ↑
-Prometheus → Grafana (docker-compose, ports 9090/3000)
+Client / Load Generator
+        ↓
+   NGINX (port 8000, Docker on Mac)
+        ↓
+  Master Node (FastAPI, Docker on Mac)
+        ↓  HTTP via ngrok tunnel
+  Worker Nodes (FastAPI on Thunder Compute GPU instances)
+        ↓  localhost
+    Ollama :11434 (llama3.2:1b)
 
-RAG runs on the master before scheduling: the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
+Prometheus → Grafana (Docker on Mac, ports 9090/3000)
 ```
 
-## Quick Start
+---
 
-### Prerequisites
+## Prerequisites
 
-Every laptop needs:
-- **Docker** (Docker Desktop on Mac/Windows, Docker Engine on Linux)
-- **Ollama** installed natively: https://ollama.com/download
+- **Mac**: Docker Desktop running
+- **Mac**: ngrok installed (`pip3 install ngrok` or download from ngrok.com)
+- **Mac**: Python 3.11+
+- **Thunder Compute account**: thundercompute.com
+- **Thunder Compute CLI**: `pip3 install thundercompute` then `tnr login`
 
-### Step 1 — Pull the model on each worker laptop
+---
+
+## Part 1 — Start the Master Stack (Mac)
 
 ```bash
-ollama pull llama3.2:1b
-ollama serve          # if not already running as a service
-```
+cd "path/to/project-3"
 
-### Step 2 — Start the Master (one laptop)
-
-```bash
-./scripts/scenario.sh master
-```
-
-Verify: `curl http://localhost:8000/health` → `{"status": "ok"}`
-
-### Step 3 — Join worker laptops
-
-Put the Master's LAN IP in `.env`:
-
-```env
-MASTER_HTTP_URL=http://192.168.1.10:8000
-```
-
-Then start a worker:
-
-```bash
-./scripts/scenario.sh worker
-```
-
-You can still override the master for a one-off run: `./scripts/run-worker.sh 192.168.1.10`.
-
-Verify: `curl http://192.168.1.10:8000/workers` — new worker appears.
-
-### Step 4 — Check the cluster output
-
-```bash
-./scripts/scenario.sh status
-```
-
-Expected shape:
-
-```text
-Master health:
-{"status":"ok"}
-
-Registered workers:
-{"workers":[...]}
-```
-
-### Step 5 — Send a RAG inference request
-
-```bash
-./scripts/scenario.sh rag
-```
-
-Expected shape:
-
-```json
-{
-  "request_id": "...",
-  "result": "...",
-  "worker_id": "...",
-  "retry_count": 0,
-  "rag_sources": ["distributed_systems.txt", "..."]
-}
-```
-
-### Optional — Configure `.env`
-
-Docker Compose reads `.env` automatically. Copy the template once:
-
-```bash
+# Copy env file (only needed once)
 cp .env.example .env
+
+# Start master + nginx + prometheus + grafana
+docker compose up --build -d
+
+# Verify master is healthy
+curl http://localhost:8000/health
+# Expected: {"status": "ok", "healthy_workers": 0}
 ```
 
-For this one-master setup, set `MASTER_HTTP_URL` once in `.env`. Worker laptops read that value automatically, and the worker script auto-detects `WORKER_ADVERTISE_HOST`. You usually only edit the worker settings if you want a different model:
+Grafana: `http://localhost:3000` (admin / admin)
+Prometheus: `http://localhost:9090`
+
+---
+
+## Part 2 — Expose Master via ngrok
+
+In a separate terminal, keep this running the entire time:
 
 ```bash
-MASTER_HTTP_URL=http://192.168.1.10:8000
-WORKER_MODEL=llama3.2:1b
+ngrok http 8000
 ```
 
-### Step 6 — Open Grafana Dashboard
-
-`http://192.168.1.10:3000` → Login: admin / admin → **Cluster Dashboard** auto-loads.
-
-### Step 7 — Run Load Test
-
-```bash
-./scripts/scenario.sh load-pdf
+Copy the HTTPS forwarding URL, e.g.:
+```
+https://yeast-spokesman-taekwondo.ngrok-free.dev
 ```
 
-This runs the project-PDF load levels: `100`, `500`, and `1000` concurrent users. It prints each completed request with the selected worker, latency, retries, and RAG sources, then prints total success rate, throughput, and latency summaries.
+You will use this as `MASTER_HTTP_URL` for all workers.
 
-For a smaller rehearsal:
+---
+
+## Part 3 — Create GPU Instances on Thunder Compute
+
+Go to console.thundercompute.com → **+ Create** (repeat 3 times):
+
+| Setting | Value |
+|---|---|
+| GPU Type | RTX A6000 |
+| Count | 1 GPU |
+| CPU | 4 vCPUs / 32GB RAM |
+| Storage | 100GB |
+| Mode | Prototyping ($0.35/hr) |
+
+Wait for all 3 to show **Running** in `tnr status`.
+
+---
+
+## Part 4 — Set Up Each GPU Instance
+
+Open **3 terminal tabs** on your Mac. In each tab connect to one instance:
 
 ```bash
-python3 scripts/send-project-requests.py --levels 10 25 50 --burst
+tnr connect 0   # Tab 1
+tnr connect 1   # Tab 2
+tnr connect 2   # Tab 3
 ```
 
-Or use:
+Run these commands **inside each instance**:
+
+### 4a — Install Ollama and pull model
 
 ```bash
-./scripts/scenario.sh load-small
+curl -fsSL https://ollama.com/install.sh | sh
+ollama serve &
+ollama pull llama3.2:1b
 ```
 
-## Fault Tolerance Demo
-
-1. Start Master + 3 workers + load generator (`./scripts/scenario.sh fault-load`)
-2. Watch cluster status: `./scripts/scenario.sh fault-watch`
-3. While running, stop one worker laptop: `./scripts/scenario.sh fault-down 10`
-4. Master detects failure in about 6-7s — in-flight tasks retry on healthy workers
-5. Restart: `./scripts/scenario.sh start-worker` — worker re-registers, rejoins cluster
-6. Watch all events live in Grafana
-
-To stop and restart the worker automatically:
-
+Verify Ollama is running:
 ```bash
-./scripts/scenario.sh fault-restart 10 15
+curl http://localhost:11434/api/version
+# Expected: {"version":"..."}
 ```
 
-## Scheduling Strategies
-
-Switch strategy live (no restart needed):
+### 4b — Clone the repo and install dependencies
 
 ```bash
-curl -X POST http://master:8000/config/strategy \
+git clone -b 003-gpu-node-dev https://github.com/YousifHisham/distributed-ai-inference.git project3
+cd project3
+pip install -r worker/requirements.txt
+```
+
+### 4c — Start the worker
+
+Replace the ngrok URL with your actual URL:
+
+```bash
+INSTANCE_IP=$(curl -s ifconfig.me)
+
+MASTER_HTTP_URL=https://YOUR-NGROK-URL.ngrok-free.dev \
+WORKER_ADVERTISE_HOST=$INSTANCE_IP \
+WORKER_HTTP_PORT=8001 \
+OLLAMA_URL=http://localhost:11434 \
+WORKER_MODEL=llama3.2:1b \
+HEARTBEAT_INTERVAL=2 \
+python3 -m uvicorn worker.main:app --host 0.0.0.0 --port 8001
+```
+
+You should see:
+```
+Registered with master — worker_id=...
+HTTP Request: POST https://YOUR-NGROK-URL.../workers/heartbeat "HTTP/1.1 200 OK"
+```
+
+---
+
+## Part 5 — Verify the Cluster
+
+On your Mac:
+
+```bash
+curl http://localhost:8000/workers | python3 -m json.tool
+```
+
+Expected: 3 workers with `"status": "HEALTHY"`.
+
+---
+
+## Part 6 — Run Inference
+
+```bash
+# Single request
+curl -X POST http://localhost:8000/infer \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is a distributed system?"}'
+```
+
+---
+
+## Part 7 — Switch Scheduling Strategy
+
+```bash
+curl -X POST http://localhost:8000/config/strategy \
   -H "Content-Type: application/json" \
   -d '{"strategy": "round_robin"}'
 ```
 
-Strategies: `round_robin` · `least_active` · `load_aware` · `lowest_latency`
+Available strategies: `round_robin` · `least_active` · `load_aware` · `lowest_latency` · `gpu_aware`
 
-Script form:
+---
+
+## Part 8 — Run the Demo Scenarios
 
 ```bash
-./scripts/scenario.sh strategy round_robin
+# Check cluster status
+./scripts/scenario.sh status
+
+# Send a RAG inference request
+./scripts/scenario.sh rag
+
+# Load test (small)
+./scripts/scenario.sh load-small
+
+# Load test (PDF levels: 100, 500, 1000 users)
+./scripts/scenario.sh load-pdf
+
+# Compare all strategies
 ./scripts/scenario.sh strategies
+
+# Fault tolerance demo
+./scripts/scenario.sh fault-watch   # watch health in one terminal
+./scripts/scenario.sh fault-down 10 # kill worker after 10s in another
 ```
+
+---
+
+## Part 9 — Tear Down
+
+**Stop instances when done — they cost $0.35/hr each.**
+
+```bash
+# On each Thunder Compute instance: Ctrl+C to stop the worker
+
+# Stop master stack on Mac
+docker compose down
+
+# Stop ngrok: Ctrl+C in its terminal
+
+# Stop Thunder Compute instances from the console or:
+tnr status   # find instance IDs, then stop from console
+```
+
+---
+
+## Local Development (no GPU, no Thunder Compute)
+
+Run everything on your Mac with `MOCK_GPU=true`:
+
+```bash
+# Terminal 1: start Ollama
+ollama serve
+
+# Terminal 2: start master
+docker compose up --build -d
+
+# Terminal 3: start a local worker
+MOCK_GPU=true \
+MASTER_HTTP_URL=http://localhost:8000 \
+WORKER_ADVERTISE_HOST=127.0.0.1 \
+WORKER_HTTP_PORT=8001 \
+OLLAMA_URL=http://localhost:11434 \
+WORKER_MODEL=llama3.2:1b \
+HEARTBEAT_INTERVAL=2 \
+python3 -m uvicorn worker.main:app --host 0.0.0.0 --port 8001
+```
+
+Run tests:
+```bash
+pip install pytest pytest-asyncio httpx
+pytest tests/unit/ -v
+pytest tests/integration/ -v   # requires master running
+```
+
+---
 
 ## Environment Variables
 
-| Variable | Default | Service |
-|----------|---------|---------|
-| `SCHEDULING_STRATEGY` | `load_aware` | Master |
-| `MAX_RETRIES` | `3` | Master |
-| `TASK_TIMEOUT` | `120` | Master |
-| `HEARTBEAT_TIMEOUT` | `6` | Master |
-| `HEALTH_CHECK_INTERVAL` | `1` | Master |
-| `MAX_QUEUE_SIZE` | `5000` | Master |
-| `RAG_ENABLED` | `true` | Master |
-| `RAG_TOP_K` | `3` | Master |
-| `RAG_DOCS_DIR` | `rag/knowledge_base` | Master |
-| `RAG_DB_DIR` | `.chroma` | Master |
-| `MASTER_HTTP_URL` | `http://localhost:8000` | Worker |
-| `OLLAMA_URL` | `http://host.docker.internal:11434` | Worker |
-| `WORKER_MODEL` | `llama3.2:1b` | Worker |
-| `HEARTBEAT_INTERVAL` | `2` | Worker |
+| Variable | Default | Description |
+|---|---|---|
+| `MASTER_HTTP_URL` | `http://localhost:8000` | Worker → Master URL (use ngrok URL for remote workers) |
+| `WORKER_ADVERTISE_HOST` | *(auto)* | IP master uses to reach back to this worker |
+| `WORKER_HTTP_PORT` | `8001` | Worker listen port |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama endpoint on worker machine |
+| `WORKER_MODEL` | `llama3.2:1b` | Model name to use for inference |
+| `HEARTBEAT_INTERVAL` | `2` | Seconds between worker heartbeats |
+| `HEARTBEAT_TIMEOUT` | `6` | Seconds before master marks worker unhealthy |
+| `SCHEDULING_STRATEGY` | `load_aware` | Initial strategy on master startup |
+| `MAX_RETRIES` | `3` | Retry attempts per request |
+| `MOCK_GPU` | `false` | Set `true` to skip pynvml GPU collection |
+
+---
 
 ## Project Structure
 
 ```
-master/          FastAPI REST gateway + HTTP scheduler + worker registration API
-worker/          FastAPI worker HTTP server + Ollama client + heartbeat agent
-common/          Shared Pydantic models, enums, logging utilities
-rag/             ChromaDB-backed knowledge retrieval and seed documents
-client/          Prompt/query set used by scenario scripts
+master/          FastAPI gateway, scheduler, worker registry, health monitor
+worker/          FastAPI worker server, Ollama client, RAG, GPU metrics, heartbeat
+common/          Shared Pydantic models and enums
+rag/             Knowledge base documents + ChromaDB initialization
+client/          Load generator
 monitoring/      Prometheus config + Grafana dashboard JSON
-scripts/         One-command demo and scenario runners
+scripts/         Demo and scenario runner scripts
+docker-compose.yml          Master stack (Mac)
+docker-compose.worker.yml   Worker container (GPU instances)
 ```

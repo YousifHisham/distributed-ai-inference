@@ -16,11 +16,12 @@ class GPUMetrics(BaseModel):
 class RegisterRequest(BaseModel):
     worker_url: str
     gpu_total_vram_gb: float
+    max_slots: int = 1
 
 
 class RegisterResponse(BaseModel):
     worker_id: str
-    heartbeat_interval_s: int = 2
+    heartbeat_interval_s: float = 0.25
 
 
 class HeartbeatPayload(BaseModel):
@@ -75,6 +76,8 @@ class WorkerStatusResponse(BaseModel):
     gpu_temp_c: float
     ecc_errors: int
     active_requests: int
+    max_slots: int
+    free_slots: int
     avg_latency_ms: float
     last_heartbeat: Optional[datetime]
 

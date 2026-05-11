@@ -30,9 +30,11 @@ async def register(http_client: httpx.AsyncClient) -> str:
         worker_url = f"http://host.docker.internal:{port}"
 
     metrics = collect_gpu_metrics()
+    max_slots = int(os.getenv("WORKER_MAX_SLOTS", "16"))
     payload = RegisterRequest(
         worker_url=worker_url,
         gpu_total_vram_gb=metrics.vram_total_gb,
+        max_slots=max_slots,
     )
 
     resp = await http_client.post(
@@ -49,7 +51,7 @@ async def register(http_client: httpx.AsyncClient) -> str:
 
 async def _heartbeat_loop(http_client: httpx.AsyncClient) -> None:
     master_url = os.getenv("MASTER_HTTP_URL", "http://localhost:8000")
-    interval = int(os.getenv("HEARTBEAT_INTERVAL", "2"))
+    interval = float(os.getenv("HEARTBEAT_INTERVAL", "0.25"))
 
     while True:
         await asyncio.sleep(interval)

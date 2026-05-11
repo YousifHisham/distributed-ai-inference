@@ -30,6 +30,8 @@ async def list_workers(request: Request) -> ClusterStatusResponse:
             gpu_temp_c=w.gpu_temp_c,
             ecc_errors=w.ecc_errors,
             active_requests=w.active_requests,
+            max_slots=w.max_slots,
+            free_slots=w.free_slots,
             avg_latency_ms=w.avg_latency_ms,
             last_heartbeat=w.last_heartbeat,
         )
