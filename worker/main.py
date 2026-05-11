@@ -6,11 +6,8 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
 
 from common.models import WorkerInferRequest, WorkerInferResponse
-from common.enums import WorkerStatus
-from worker.state import WorkerStateMachine
 from worker.rag import init_rag, build_prompt
 from worker.gpu_metrics import collect_gpu_metrics
 from worker import agent
@@ -19,8 +16,8 @@ from worker import inference as infer_mod
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-_state = WorkerStateMachine()
 _active_requests = 0
+_draining = False
 
 
 def get_active_requests() -> int:
@@ -70,7 +67,7 @@ app = FastAPI(title="Worker Agent", lifespan=lifespan)
 async def infer(body: WorkerInferRequest, request: Request) -> WorkerInferResponse:
     global _active_requests
 
-    if _state.status == WorkerStatus.DRAINING:
+    if _draining:
         raise HTTPException(status_code=503, detail="worker is draining")
 
     _active_requests += 1
@@ -97,10 +94,4 @@ async def infer(body: WorkerInferRequest, request: Request) -> WorkerInferRespon
 @app.get("/health")
 async def health() -> dict:
     worker_id = agent.get_worker_id() or "unknown"
-    status = _state.status
-    if status == WorkerStatus.UNHEALTHY:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "unhealthy", "worker_id": worker_id, "worker_status": status.value},
-        )
-    return {"status": "ok", "worker_id": worker_id, "worker_status": status.value}
+    return {"status": "ok", "worker_id": worker_id, "active_requests": _active_requests}

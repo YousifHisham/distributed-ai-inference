@@ -37,16 +37,23 @@ async def register(http_client: httpx.AsyncClient) -> str:
         max_slots=max_slots,
     )
 
-    resp = await http_client.post(
-        f"{master_url}/workers/register",
-        json=payload.model_dump(),
-        timeout=10.0,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    _worker_id = data["worker_id"]
-    logger.info("Registered with master — worker_id=%s", _worker_id)
-    return _worker_id
+    for attempt in range(1, 11):
+        try:
+            resp = await http_client.post(
+                f"{master_url}/workers/register",
+                json=payload.model_dump(),
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            _worker_id = data["worker_id"]
+            logger.info("Registered with master — worker_id=%s url=%s", _worker_id, worker_url)
+            return _worker_id
+        except Exception as exc:
+            logger.warning("Registration attempt %d/10 failed: %s — retrying in 5s", attempt, exc)
+            await asyncio.sleep(5)
+
+    raise RuntimeError(f"Could not register with master at {master_url} after 10 attempts")
 
 
 async def _heartbeat_loop(http_client: httpx.AsyncClient) -> None:

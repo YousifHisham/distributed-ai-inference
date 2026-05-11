@@ -64,9 +64,6 @@ class WorkerRegistry:
     def get_healthy_workers(self) -> list[WorkerNode]:
         return [w for w in self._workers.values() if w.status == WorkerStatus.HEALTHY]
 
-    def get_schedulable_workers(self) -> list[WorkerNode]:
-        return [w for w in self._workers.values() if w.status == WorkerStatus.HEALTHY]
-
     def mark_unhealthy(self, worker_id: str) -> None:
         if worker_id in self._workers:
             self._workers[worker_id].status = WorkerStatus.UNHEALTHY

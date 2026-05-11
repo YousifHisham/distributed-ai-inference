@@ -94,7 +94,7 @@ class Scheduler:
             worker = None
             while worker is None:
                 async with self._lock:
-                    workers = self._registry.get_schedulable_workers()
+                    workers = self._registry.get_healthy_workers()
                     workers_with_capacity = [w for w in workers if w.free_slots > 0]
                     if workers_with_capacity:
                         try:
@@ -116,7 +116,7 @@ class Scheduler:
             if attempt > 0:
                 # retry: pick a new worker
                 async with self._lock:
-                    workers = self._registry.get_schedulable_workers()
+                    workers = self._registry.get_healthy_workers()
                     workers_with_capacity = [w for w in workers if w.free_slots > 0]
                     if not workers_with_capacity:
                         break
