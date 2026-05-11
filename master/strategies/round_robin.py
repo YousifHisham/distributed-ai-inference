@@ -13,9 +13,8 @@ class RoundRobinStrategy(BaseStrategy):
         return "round_robin"
 
     def select_worker(self, workers: list[WorkerNode]) -> WorkerNode:
-        available = [w for w in workers if w.free_slots > 0]
-        if not available:
-            raise ValueError("No workers with free slots")
-        worker = available[self._index % len(available)]
+        if not workers:
+            raise ValueError("No healthy workers")
+        worker = workers[self._index % len(workers)]
         self._index += 1
         return worker

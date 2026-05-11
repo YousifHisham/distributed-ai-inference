@@ -23,31 +23,25 @@ class WorkerNode:
     gpu_temp_c: float = 0.0
     ecc_errors: int = 0
     active_requests: int = 0
-    max_slots: int = 1
     avg_latency_ms: float = 0.0
     last_heartbeat: Optional[datetime] = field(default=None)
     registered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-
-    @property
-    def free_slots(self) -> int:
-        return max(0, self.max_slots - self.active_requests)
 
 
 class WorkerRegistry:
     def __init__(self) -> None:
         self._workers: dict[str, WorkerNode] = {}
 
-    def register(self, url: str, vram_total_gb: float, max_slots: int = 1) -> WorkerNode:
+    def register(self, url: str, vram_total_gb: float) -> WorkerNode:
         worker_id = str(uuid.uuid4())
         node = WorkerNode(
             worker_id=worker_id,
             url=url,
             vram_total_gb=vram_total_gb,
-            max_slots=max_slots,
             last_heartbeat=datetime.now(timezone.utc),
         )
         self._workers[worker_id] = node
-        logger.info("Registered worker %s at %s (max_slots=%d)", worker_id, url, max_slots)
+        logger.info("Registered worker %s at %s", worker_id, url)
         return node
 
     def update_heartbeat(self, worker_id: str, payload: HeartbeatPayload) -> WorkerNode:

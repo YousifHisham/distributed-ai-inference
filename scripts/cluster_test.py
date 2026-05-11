@@ -53,7 +53,7 @@ async def show_cluster_status(client: httpx.AsyncClient, master_url: str) -> boo
         wid = w["worker_id"][:8]
         print(
             f"  [{w['status']:8s}] {wid}  url={w['url']}  "
-            f"slots={w['active_requests']}/{w['max_slots']}  "
+            f"active={w['active_requests']}  "
             f"gpu={w['gpu_util_pct']:.0f}%  "
             f"avg_lat={w['avg_latency_ms']:.0f}ms"
         )

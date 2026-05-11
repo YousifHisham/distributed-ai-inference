@@ -90,15 +90,13 @@ class Scheduler:
         while True:
             job = await self._queue.get()
 
-            # wait until a worker has a free slot
             worker = None
             while worker is None:
                 async with self._lock:
                     workers = self._registry.get_healthy_workers()
-                    workers_with_capacity = [w for w in workers if w.free_slots > 0]
-                    if workers_with_capacity:
+                    if workers:
                         try:
-                            worker = self._strategy.select_worker(workers_with_capacity)
+                            worker = self._strategy.select_worker(workers)
                             worker.active_requests += 1
                         except ValueError:
                             worker = None
@@ -117,11 +115,10 @@ class Scheduler:
                 # retry: pick a new worker
                 async with self._lock:
                     workers = self._registry.get_healthy_workers()
-                    workers_with_capacity = [w for w in workers if w.free_slots > 0]
-                    if not workers_with_capacity:
+                    if not workers:
                         break
                     try:
-                        worker = self._strategy.select_worker(workers_with_capacity)
+                        worker = self._strategy.select_worker(workers)
                         worker.active_requests += 1
                     except ValueError:
                         break

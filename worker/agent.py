@@ -30,11 +30,9 @@ async def register(http_client: httpx.AsyncClient) -> str:
         worker_url = f"http://host.docker.internal:{port}"
 
     metrics = collect_gpu_metrics()
-    max_slots = int(os.getenv("WORKER_MAX_SLOTS", "9999"))
     payload = RegisterRequest(
         worker_url=worker_url,
         gpu_total_vram_gb=metrics.vram_total_gb,
-        max_slots=max_slots,
     )
 
     for attempt in range(1, 11):

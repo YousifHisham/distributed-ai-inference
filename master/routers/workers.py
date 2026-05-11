@@ -16,7 +16,7 @@ async def register_worker(body: RegisterRequest, request: Request) -> RegisterRe
         raise HTTPException(status_code=400, detail="worker_url is required")
 
     registry = request.app.state.registry
-    node = registry.register(body.worker_url, body.gpu_total_vram_gb, body.max_slots)
+    node = registry.register(body.worker_url, body.gpu_total_vram_gb)
     return RegisterResponse(worker_id=node.worker_id, heartbeat_interval_s=0.25)
 
 
