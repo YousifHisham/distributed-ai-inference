@@ -1,6 +1,5 @@
 services:
   worker:
-    container_name: worker-agent
     build:
       context: .
       dockerfile: worker/Dockerfile

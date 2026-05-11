@@ -1,1 +1,1 @@
-[{"targets": ["192.168.100.50:8001"], "labels": {"worker_id": "8ab1ab74cf0f-5bacb889", "hostname": "8ab1ab74cf0f"}}, {"targets": ["192.168.100.4:8001"], "labels": {"worker_id": "099b74c926f7-5a255d4b", "hostname": "099b74c926f7"}}]
+[{"targets": ["192.168.100.50:8001"], "labels": {"worker_id": "8ab1ab74cf0f-5bacb889", "hostname": "8ab1ab74cf0f"}}, {"targets": ["192.168.100.4:8001"], "labels": {"worker_id": "67afc54abbdf-d8d5288e", "hostname": "67afc54abbdf"}}, {"targets": ["192.168.100.4:8001"], "labels": {"worker_id": "2ada89b3a2cf-36f34221", "hostname": "2ada89b3a2cf"}}]
