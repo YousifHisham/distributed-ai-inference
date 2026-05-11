@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
-from worker.main import app_state
+from worker.state import app_state
 
 router = APIRouter(tags=["monitoring"])
 

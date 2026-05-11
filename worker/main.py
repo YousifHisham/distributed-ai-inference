@@ -14,7 +14,7 @@ HEARTBEAT_INTERVAL = float(os.getenv("HEARTBEAT_INTERVAL", "2"))
 WORKER_HTTP_PORT = int(os.getenv("WORKER_HTTP_PORT", "8001"))
 WORKER_ADVERTISE_HOST = os.getenv("WORKER_ADVERTISE_HOST")
 
-app_state: dict = {}
+from worker.state import app_state
 
 
 @asynccontextmanager

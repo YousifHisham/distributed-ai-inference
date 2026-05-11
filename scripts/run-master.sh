@@ -15,4 +15,4 @@ echo "Example: MASTER_HTTP_URL=http://192.168.1.10:8000"
 echo
 
 cd "$ROOT_DIR"
-exec docker compose up --build
+exec docker compose up --build -d
