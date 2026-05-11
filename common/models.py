@@ -81,6 +81,7 @@ class WorkerStatusResponse(BaseModel):
 class ClusterStatusResponse(BaseModel):
     workers: list[WorkerStatusResponse]
     active_strategy: str
+    queue_depth: int
     healthy_count: int
     draining_count: int
     unhealthy_count: int

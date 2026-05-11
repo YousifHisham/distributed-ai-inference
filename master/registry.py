@@ -51,7 +51,9 @@ class WorkerRegistry:
         node.vram_total_gb = payload.vram_total_gb
         node.gpu_temp_c = payload.gpu_temp_c
         node.ecc_errors = payload.ecc_errors
-        node.active_requests = payload.active_requests
+        # active_requests is owned by the scheduler (incremented on dispatch,
+        # decremented on completion). The heartbeat value is only used for the
+        # draining recovery check in routers/workers.py.
         node.last_heartbeat = datetime.now(timezone.utc)
         return node
 

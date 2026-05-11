@@ -39,6 +39,7 @@ async def list_workers(request: Request) -> ClusterStatusResponse:
     return ClusterStatusResponse(
         workers=worker_responses,
         active_strategy=scheduler.current_strategy_name,
+        queue_depth=scheduler.queue_depth,
         healthy_count=sum(1 for w in workers if w.status == WorkerStatus.HEALTHY),
         draining_count=sum(1 for w in workers if w.status == WorkerStatus.DRAINING),
         unhealthy_count=sum(1 for w in workers if w.status == WorkerStatus.UNHEALTHY),
