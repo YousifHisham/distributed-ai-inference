@@ -1,11 +1,22 @@
 # Distributed AI Inference Orchestration Platform
 
-CSE354 Distributed Computing — Ain Shams University, Semester 2 2025/2026
+![Python](https://img.shields.io/badge/Python-3.11-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-A production-style distributed system that routes 1000+ concurrent LLM inference requests across multiple worker laptops on a LAN. Demonstrates distributed scheduling, fault tolerance, HTTP-based cluster communication, nginx reverse proxying, and Prometheus/Grafana observability.
+**CSE354 Distributed Computing — Ain Shams University, Semester 2 2025/2026**
+
+A production-style distributed system designed to intelligently route 1000+ concurrent Large Language Model (LLM) inference requests across multiple physical worker nodes (GPUs) on a Local Area Network.
+
+## Key Features
+
+* **Dynamic Load Balancing:** Supports `round_robin`, `least_active`, `lowest_latency`, and a custom composite `load_aware` scoring algorithm.
+* **Retrieval-Augmented Generation (RAG):** Integrates ChromaDB to inject vectorized local knowledge into LLM prompts before dispatching them to workers.
+* **Strict Fault Tolerance:** Master node continuously monitors worker heartbeats. If a node fails, in-flight tasks are instantly intercepted and requeued to surviving nodes.
+* **Full Observability:** Real-time cluster monitoring using Prometheus metric scraping and a custom Grafana dashboard.
 
 ## Architecture
-
 ```
 Client Load Generator
         ↓  REST
@@ -21,6 +32,14 @@ Prometheus → Grafana (docker-compose, ports 9090/3000)
 
 RAG runs on the master before scheduling: the master retrieves context from ChromaDB, builds an enhanced prompt, and sends that prompt to the selected worker.
 ```
+**The Request Flow:**
+1. **Client** hits the **NGINX Reverse Proxy** via HTTP REST.
+2. The **Master Gateway (FastAPI)** catches the request, executes the RAG pipeline against **ChromaDB**, and places the enriched prompt into the asynchronous Task Queue.
+3. The **Scheduler** evaluates the Worker Registry and dispatches the task to the optimal **Worker Agent (FastAPI)**.
+4. The Worker queries its local **Ollama** instance, awaits the inference, and returns the result. 
+5. **Prometheus** continuously scrapes `/metrics` from all nodes, visualized in **Grafana**.
+
+---
 
 # How to Run Our Project
 
@@ -215,3 +234,8 @@ client/          Prompt/query set used by scenario scripts
 monitoring/      Prometheus config + Grafana dashboard JSON
 scripts/         One-command demo and scenario runners
 ```
+
+## Future Enhancements
+* **Master Node Redundancy:** Implementing Raft consensus to support multiple active Master nodes and eliminate the single point of failure.
+* **Message Broker Integration:** Moving the in-memory Python task queue to Apache Kafka / RabbitMQ for persistent task tracking during crashes.
+* **Continuous Batching:** Upgrading the worker execution engine to vLLM to support PagedAttention and simultaneous multi-prompt GPU processing.
